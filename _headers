@@ -1,0 +1,6 @@
+/sw.js
+  Cache-Control: no-cache
+/app/sw.js
+  Cache-Control: no-cache
+/*.webp
+  Cache-Control: public, max-age=31536000, immutable

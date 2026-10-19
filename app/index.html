@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="xeniq">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#050010" id="tc">
+<title>XENIQ · Smart Calculator</title>
+<link rel="icon" href="icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon.png">
+<style>
+:root{--bg:#07060f;--pr:139,92,246;--cr:34,211,238;--kr:232,121,249;--p:rgb(var(--pr));--c:rgb(var(--cr));--pk:rgb(var(--kr));--tx:#f4f3ff;--mut:#8b88a8;--g1:rgba(255,255,255,.08);--g2:rgba(255,255,255,.02);--line:rgba(255,255,255,.1);--inp:rgba(0,0,0,.35);--ab:.36;--red:#fb7185;--ease:cubic-bezier(.2,.8,.2,1);--sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--mono:ui-monospace,"SF Mono","Roboto Mono",Menlo,Consolas,monospace}
+[data-theme=xeniq]{--bg:#050010;--pr:139,60,240;--cr:196,148,255;--kr:236,92,250}
+[data-theme=ember]{--bg:#0e0705;--pr:249,115,22;--cr:251,191,36;--kr:251,113,133}
+[data-theme=matrix]{--bg:#020a05;--pr:16,185,129;--cr:163,230,53;--kr:45,212,191}
+[data-theme=amoled]{--bg:#000;--ab:0}
+[data-theme=paper]{--bg:#f3f1ff;--pr:124,58,237;--cr:8,145,178;--kr:192,38,211;--tx:#1b1a2e;--mut:#6b6a85;--g1:rgba(255,255,255,.95);--g2:rgba(255,255,255,.7);--line:rgba(30,20,80,.14);--inp:rgba(255,255,255,.95);--ab:.16;--red:#e11d48}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--sans);overflow:hidden;overscroll-behavior:none;user-select:none;-webkit-user-select:none}
+input,textarea,select{user-select:text;-webkit-user-select:text}
+button,input,select,textarea{font:inherit;color:inherit}
+.aurora{position:fixed;inset:0;pointer-events:none;background:radial-gradient(60vmax 60vmax at 0% 0%,rgba(var(--pr),calc(var(--ab)*.9)),transparent 70%),radial-gradient(55vmax 55vmax at 100% 100%,rgba(var(--cr),calc(var(--ab)*.55)),transparent 70%),radial-gradient(35vmax 35vmax at 60% 45%,rgba(var(--kr),calc(var(--ab)*.3)),transparent 70%)}
+.aurora i{display:none}
+.app{position:relative;height:100%;width:100%;max-width:560px;margin:0 auto;display:flex;flex-direction:column;padding:calc(max(env(safe-area-inset-top),var(--safe-area-inset-top,0px)) + 8px) 14px calc(max(env(safe-area-inset-bottom),var(--safe-area-inset-bottom,0px)) + 8px)}
+header{display:flex;align-items:center;justify-content:space-between;padding:2px 4px 10px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px}
+.logo{width:36px;height:30px;object-fit:contain}
+.brand span{background:linear-gradient(90deg,#c4b5fd,#e879f9);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:.18em;font-weight:800}
+.chips{display:flex;gap:6px;font-size:12px;color:var(--mut)}
+.chip{border:1px solid var(--line);border-radius:99px;padding:4px 10px;background:none;cursor:pointer}
+.chip.on{color:var(--c);border-color:rgba(var(--cr),.5)}
+.view{display:none;flex:1;min-height:0;flex-direction:column}
+.view.on{display:flex;animation:in .15s}
+@keyframes in{from{opacity:0}}
+.glass{background:linear-gradient(160deg,var(--g1),var(--g2));border:1px solid var(--line);border-radius:24px}
+.scroll{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.scroll::-webkit-scrollbar{display:none}
+/* calculator */
+#v-calc{display:flex}
+#v-calc:not(.on){display:none}
+.screen{position:relative;padding:12px 18px 14px;margin-bottom:10px;text-align:right;min-height:136px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
+.screen::before{content:"";position:absolute;inset:0;background:url(mark.png) no-repeat 10px 44px/118px;opacity:.13;pointer-events:none}
+.screen::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:linear-gradient(90deg,transparent,var(--p),var(--c),transparent)}
+.mbadge{position:absolute;top:14px;right:18px;font:600 12px var(--mono);color:var(--pk);opacity:0}
+.mbadge.on{opacity:1}
+.sci-toggle{position:absolute;top:12px;left:14px;border:1px solid var(--line);background:rgba(var(--pr),.08);border-radius:99px;padding:5px 12px;font-size:12px;cursor:pointer;transition:.25s}
+.sci-toggle.on{background:var(--p);border-color:var(--p);color:#fff}
+#last{font:400 13px var(--mono);color:var(--mut);min-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 40px 0 90px}
+#main{text-shadow:0 0 26px rgba(var(--pr),.55);font:500 54px/1.15 var(--mono);white-space:nowrap;overflow-x:auto;scrollbar-width:none;letter-spacing:-1px}
+#main::-webkit-scrollbar{display:none}
+#prev{font:500 17px var(--mono);color:var(--c);min-height:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sci{display:none;grid-template-columns:repeat(6,1fr);gap:6px}
+.sci.open{display:grid;margin-bottom:8px}
+.sci .key{min-height:38px;font-size:14px;border-radius:13px}
+.pad{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:1fr;gap:9px;flex:1;min-height:0}
+.key{border:1px solid var(--line);border-radius:22px;background:linear-gradient(180deg,var(--g1),var(--g2));font:500 24px var(--mono);cursor:pointer;display:grid;place-items:center;touch-action:manipulation;transition:transform .1s;box-shadow:inset 0 1px 0 rgba(255,255,255,.09)}
+.key:active{transform:scale(.9);background:rgba(var(--pr),.3)}
+.key.op{color:var(--c);background:linear-gradient(180deg,rgba(var(--cr),.2),rgba(var(--cr),.05));border-color:rgba(var(--cr),.28);font-size:28px}
+.key.fn{color:var(--pk);background:linear-gradient(180deg,rgba(var(--kr),.18),rgba(var(--kr),.04));border-color:rgba(var(--kr),.24)}
+.key.ac{color:var(--red)}
+.key.eq{background:linear-gradient(135deg,var(--p),var(--pk));border:0;color:#fff;font-size:32px;box-shadow:0 8px 26px rgba(var(--pr),.5)}
+@media (orientation:landscape) and (min-width:640px){
+ #v-calc.on{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr;gap:12px}
+ #v-calc .screen{margin:0;min-height:110px}#main{font-size:42px}
+ #v-calc .sci{display:grid;grid-column:1;grid-row:2;margin:0;align-content:start}
+ #v-calc .sci .key{min-height:46px}
+ #v-calc .pad{grid-column:2;grid-row:1/3}.sci-toggle{display:none}#last{padding-left:20px}.key{font-size:20px}
+}
+@media (max-height:480px){.dock button span{display:none}.dock button{padding:6px 0}header{display:none}}
+@media (max-height:700px) and (orientation:portrait){.screen{min-height:104px}#main{font-size:42px}.key{font-size:20px;border-radius:18px}}
+/* start screen */
+#boot{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;color:#fff;transition:opacity .5s,visibility .5s}
+#boot.out{opacity:0;visibility:hidden}
+#boot img{object-fit:contain;border-radius:14%}
+#boot h1{font:700 30px var(--sans);letter-spacing:-.5px}
+#boot p{font:400 15px/1.45 var(--sans);max-width:300px}
+#boot .bar{width:140px;height:4px;border-radius:9px;background:rgba(255,255,255,.15);overflow:hidden;margin-top:16px}
+#boot .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--p),var(--c));animation:bbar var(--d,2s) linear forwards}
+@keyframes bbar{to{width:100%}}
+.a-zoom>*{animation:bz .8s var(--ease) both}@keyframes bz{from{opacity:0;transform:scale(.6)}}
+.a-fade>*{animation:bf 1s both}@keyframes bf{from{opacity:0}}
+.a-slide>*{animation:bs .8s var(--ease) both}@keyframes bs{from{opacity:0;transform:translateY(30px)}}
+.a-glow img{animation:bg 1.6s ease-in-out infinite alternate}@keyframes bg{from{filter:drop-shadow(0 0 6px var(--p))}to{filter:drop-shadow(0 0 28px var(--c))}}
+#boot>*:nth-child(2){animation-delay:.12s}#boot>*:nth-child(3){animation-delay:.24s}
+/* dock */
+.dock{display:flex;gap:4px;padding:5px;margin-top:10px}
+.dock button{flex:1;background:none;border:0;border-radius:18px;padding:8px 0 6px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--mut);font-size:11px;cursor:pointer;transition:.25s}
+.dock button.on{color:var(--tx);background:linear-gradient(135deg,rgba(var(--pr),.4),rgba(var(--cr),.22))}
+.dock svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+/* tools */
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding-bottom:6px}
+.tcard{padding:14px;text-align:left;cursor:pointer;border:1px solid var(--line);display:flex;flex-direction:column;gap:6px;transition:transform .12s}
+.tcard:active{transform:scale(.96)}
+.tcard .ic{min-width:40px;padding:0 8px;align-self:flex-start;height:40px;border-radius:13px;display:grid;place-items:center;font:600 14px var(--mono);color:#fff;background:linear-gradient(135deg,var(--p),var(--c))}
+.tcard b{font-size:15px}.tcard small{color:var(--mut);font-size:12px;line-height:1.35}
+.thead{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.thead button{width:40px;height:40px;border-radius:14px;border:1px solid var(--line);background:rgba(var(--pr),.1);cursor:pointer;font-size:18px}
+.thead b{font-size:18px}
+.tool{padding:16px;margin-bottom:10px}
+.fld{margin-bottom:10px}
+label{display:block;font-size:13px;color:var(--mut);margin-bottom:5px}
+.inp{width:100%;background:var(--inp);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font:500 16px var(--mono);outline:none;transition:.2s;appearance:none;-webkit-appearance:none;min-height:46px}
+.inp:focus{border-color:var(--c);box-shadow:0 0 0 3px rgba(var(--cr),.18)}
+.inp.bad{border-color:var(--red)}
+select.inp{font-family:var(--sans)}
+textarea.inp{resize:none;line-height:1.5;white-space:pre;overflow-x:auto}
+.out{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cell{background:var(--inp);border:1px solid var(--line);border-radius:14px;padding:10px 12px;cursor:pointer;min-width:0}
+.cell b{display:block;font:500 12px var(--sans);color:var(--mut);margin-bottom:3px}
+.cell span{font:500 15px var(--mono);word-break:break-word;white-space:pre-wrap}
+.cell.wide{grid-column:1/-1}.cell.hi span{color:var(--c);font-size:19px}
+.note{color:var(--mut);font-size:12px;margin-top:10px;line-height:1.5}
+.btn{width:100%;border:0;border-radius:14px;padding:13px;font-weight:600;background:linear-gradient(135deg,var(--p),var(--c));color:#fff;cursor:pointer}
+.crow{display:flex;gap:10px;align-items:center;padding:11px 14px;margin-bottom:8px;cursor:pointer;border-radius:16px}
+.crow:active{background:rgba(var(--pr),.25)}
+.crow .s{font:600 16px var(--mono);color:var(--pk);width:46px}.crow .n{flex:1;font-size:14px}.crow small{display:block;color:var(--mut);font:400 12px var(--mono)}
+.crow button{border:1px solid var(--line);background:none;border-radius:10px;padding:6px 9px;cursor:pointer}
+.nbrow{display:flex;justify-content:space-between;gap:12px;padding:8px 4px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:14px}
+.nbrow span:first-child{color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.nbrow span:last-child{color:var(--c);font-weight:600}
+/* graph */
+.gwrap{flex:1;min-height:180px;position:relative;overflow:hidden;border-radius:24px;touch-action:none}
+#gc{position:absolute;inset:0;width:100%;height:100%}
+#gInfo{font:500 13px var(--mono);color:var(--c);min-height:20px;padding:0 6px 6px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.frow{display:flex;gap:8px;align-items:center;margin-top:8px}
+.frow i{width:12px;height:12px;border-radius:50%;flex:none}
+.frow .inp{padding:8px 12px;min-height:40px}
+.gbar{display:flex;gap:6px;margin-top:8px;overflow-x:auto;scrollbar-width:none}
+.gbar button{flex:none;border:1px solid var(--line);background:rgba(var(--pr),.1);border-radius:10px;padding:7px 11px;font:500 14px var(--mono);cursor:pointer}
+.gbar button.on{background:var(--p);color:#fff}
+@media (orientation:landscape) and (min-width:640px){#v-graph.on{display:grid;grid-template-columns:1.5fr 1fr;gap:12px}#v-graph .gwrap{grid-row:1/4}}
+.tcat{font:600 13px var(--sans);color:var(--mut);margin:14px 4px 8px}
+.row2{display:flex;gap:8px}.row2>*{flex:1;min-width:0}.row2 .fld{margin-bottom:10px}
+.tgrid2{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:12px}
+.tgrid2 button{border:1px solid var(--line);background:rgba(var(--pr),.12);border-radius:10px;padding:9px 0;font:600 14px var(--mono);cursor:pointer}
+.tbc{padding:12px 16px;margin-bottom:10px;scroll-margin-top:6px;cursor:pointer}.tbc b{color:var(--c)}
+.tbl{font:500 15px/1.75 var(--mono);white-space:pre;columns:2;margin-top:6px}
+/* history & settings */
+.h{padding:12px 16px;display:flex;flex-direction:column;align-items:flex-end;cursor:pointer;margin-bottom:8px}
+.h small{font:400 13px var(--mono);color:var(--mut)}.h strong{font:500 22px var(--mono);color:var(--c)}
+.empty{text-align:center;color:var(--mut);padding:50px 20px;line-height:1.6}
+.ghost{margin-top:8px;background:rgba(251,113,133,.12);border:1px solid rgba(251,113,133,.3);color:var(--red);border-radius:14px;padding:12px;font-weight:600;cursor:pointer;width:100%}
+.setrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 4px;border-bottom:1px solid var(--line)}
+.setrow:last-child{border:0}.setrow small{display:block;color:var(--mut);font-size:12px;margin-top:2px}
+.sw{display:flex;gap:10px}.sw button{width:38px;height:38px;border-radius:50%;border:2px solid transparent;cursor:pointer}.sw button.on{border-color:var(--tx)}
+.tg{width:50px;height:30px;border-radius:99px;border:1px solid var(--line);background:var(--inp);position:relative;cursor:pointer;flex:none}
+.tg::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--mut);transition:.25s var(--ease)}
+.tg.on{background:var(--p)}.tg.on::after{left:23px;background:#fff}
+#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 90px);transform:translate(-50%,20px);background:var(--bg);border:1px solid var(--line);color:var(--tx);padding:9px 16px;border-radius:99px;font-size:13px;opacity:0;pointer-events:none;transition:.3s var(--ease);max-width:90%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+.lite *,.lite *::before{animation:none!important;transition:none!important}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<script>
+/* ============ START SCREEN: edit anything here ============ */
+const SPLASH={
+ enabled:true,
+ once:false,                      // true = show only the first time the app opens
+ duration:1600,                   // milliseconds
+ background:'radial-gradient(circle at 50% 35%,#3a0a78,#050010 72%)',   // any CSS colour, gradient or url(...)
+ image:'icon.png',                // file from your repo, a web URL, or a data: URI. '' = no image
+ imageSize:220,
+ title:'',                      // the logo already shows the name. Type text here to add a title under it
+ tagline:['{greet}, ready to solve?','{date}','Smart maths for smart students','Built by Nexus Tech'],   // text, or a list: one is picked at random each launch
+ titleColor:'#ffffff',
+ taglineColor:'#a9a6c9',
+ anim:'zoom',                     // zoom | fade | slide | glow | none
+ loader:true,                     // progress bar
+ skipOnTap:true,
+ html:'',                         // your own markup. If filled, it replaces image, title and tagline
+ css:''                           // extra CSS for the start screen, e.g. '#boot h1{font-size:44px}'
+};
+/* {greet} = Good morning/afternoon/evening   {date} = today's date. Both work in title, tagline and html. */
+</script>
+<script>
+(function(){const C=SPLASH;if(!C.enabled)return;
+ if(C.once){try{if(localStorage.getItem('nx-seen'))return;localStorage.setItem('nx-seen','1')}catch(e){}}
+ const hr=new Date().getHours(),sub=s=>String(s).replace(/\{greet\}/g,hr<12?'Good morning':hr<17?'Good afternoon':'Good evening').replace(/\{date\}/g,new Date().toLocaleDateString('en-US',{weekday:'long',day:'numeric',month:'long'}));
+ const b=document.createElement('div');b.id='boot';b.className='a-'+C.anim;b.style.background=C.background;b.style.setProperty('--d',C.duration+'ms');
+ if(C.html)b.innerHTML=sub(C.html);
+ else{
+  if(C.image){const i=new Image();i.src=C.image;i.width=i.height=C.imageSize;i.alt='';i.onerror=()=>i.remove();b.append(i)}
+  if(C.title){const t=document.createElement('h1');t.textContent=sub(C.title);t.style.color=C.titleColor;b.append(t)}
+  const tl=Array.isArray(C.tagline)?C.tagline[Math.floor(Math.random()*C.tagline.length)]:C.tagline;
+  if(tl){const p=document.createElement('p');p.textContent=sub(tl);p.style.color=C.taglineColor;b.append(p)}
+ }
+ if(C.loader){const bar=document.createElement('div');bar.className='bar';bar.append(document.createElement('i'));b.append(bar)}
+ if(C.css){const st=document.createElement('style');st.textContent=C.css;document.head.append(st)}
+ document.body.append(b);
+ let done=0;const hide=()=>{if(done)return;done=1;b.classList.add('out');setTimeout(()=>b.remove(),700)};
+ if(C.skipOnTap)b.onclick=hide;setTimeout(hide,C.duration);
+})();
+</script>
+<div class="aurora"><i></i><i></i><i></i></div>
+<div class="app">
+<header>
+  <div class="brand"><img class="logo" src="mark.png" alt=""><span>XENIQ</span></div>
+  <div class="chips"><button class="chip" id="degBtn">Rad</button></div>
+</header>
+
+<section class="view on" id="v-calc">
+  <div class="screen glass">
+    <button class="sci-toggle" id="sciBtn">Scientific</button><div class="mbadge" id="mb">M</div>
+    <div id="last"></div><div id="main">0</div><div id="prev"></div>
+  </div>
+  <div class="sci" id="sci"></div>
+  <div class="pad" id="pad"></div>
+</section>
+
+<section class="view" id="v-graph">
+  <div class="gwrap glass"><canvas id="gc"></canvas></div>
+  <div id="gInfo" style="margin-top:8px">Drag to pan, pinch to zoom</div>
+  <div class="scroll" style="flex:none;max-height:42%">
+    <div id="gfn"></div>
+    <div class="gbar" id="gkeys"></div>
+    <div class="gbar" id="gact"><button id="gTrace">Trace</button><button id="gZero">Find zeros</button><button id="gReset">Reset view</button></div>
+    <div class="out" id="gz"></div>
+  </div>
+</section>
+
+<section class="view" id="v-tools">
+  <div class="scroll" id="tl-grid"><input class="inp" id="tsearch" placeholder="Search tools" style="margin-bottom:4px"><div id="tg"></div></div>
+  <div class="scroll" id="tl-page" style="display:none"><div class="thead"><button id="tback" aria-label="Back">←</button><b id="ttitle"></b></div><div id="tl-body"></div></div>
+</section>
+
+<section class="view" id="v-hist">
+  <div class="scroll" id="hist"></div>
+  <button class="ghost" id="hclear">Clear history</button>
+</section>
+
+<section class="view" id="v-set"><div class="scroll"><div class="glass" style="padding:6px 16px" id="setbox"></div><div class="note" style="text-align:center">XENIQ Smart Calculator v6.0 · works fully offline<br>Built with 💜 by Nexus Tech</div></div></section>
+
+<nav class="dock glass" id="dock">
+  <button class="on" data-v="calc"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/></svg><span>Calc</span></button>
+  <button data-v="graph"><svg viewBox="0 0 24 24"><path d="M3 3v18h18M6 16l4-6 4 3 5-8"/></svg><span>Graph</span></button>
+  <button data-v="tools"><svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg><span>Tools</span></button>
+  <button data-v="hist"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 109-9 9 9 0 00-7 3.5M3 4v4h4M12 7v5l3 2"/></svg><span>History</span></button>
+  <button data-v="set"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 5v4M8 15v4"/></svg><span>Settings</span></button>
+</nav>
+</div>
+<div id="toast"></div>
+<script>
+/* ====== STATE ====== */
+const load=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}};
+const store=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+let S=Object.assign({theme:'xeniq',haptic:true,hs:2,deg:false,prec:0,lite:false},load('nx-set',{}));
+let ans=0;
+/* ====== MATH ENGINE (no eval) ====== */
+const NM=['sinh','cosh','tanh','asin','acos','atan','sin','cos','tan','sqrt','cbrt','abs','exp','log','ln','nCr','nPr','gcd','hcf','lcm','mod'];
+let DEG=false,X=0,ANSV=0,VARS=Object.create(null);
+const rad=a=>DEG?a*Math.PI/180:a,dg=a=>DEG?a*180/Math.PI:a;
+function fact(n){if(n<0||n>170||Math.abs(n-Math.round(n))>1e-9)throw 0;n=Math.round(n);let r=1;for(let i=2;i<=n;i++)r*=i;return r}
+function ncr(n,r){if(r<0||r>n)throw 0;r=Math.min(r,n-r);let x=1;for(let i=0;i<r;i++)x=x*(n-i)/(i+1);return Math.round(x)}
+function npr(n,r){if(r<0||r>n)throw 0;let x=1;for(let i=0;i<r;i++)x*=n-i;return x}
+const FUN={sin:a=>Math.sin(rad(a)),cos:a=>Math.cos(rad(a)),tan:a=>Math.tan(rad(a)),asin:a=>dg(Math.asin(a)),acos:a=>dg(Math.acos(a)),atan:a=>dg(Math.atan(a)),sinh:Math.sinh,cosh:Math.cosh,tanh:Math.tanh,ln:Math.log,log:Math.log10,abs:Math.abs,sqrt:Math.sqrt,cbrt:Math.cbrt,exp:Math.exp,nCr:ncr,nPr:npr};
+const gcdN=(a,b)=>{a=Math.abs(Math.round(a));b=Math.abs(Math.round(b));while(b){[a,b]=[b,a%b]}return a};
+FUN.gcd=FUN.hcf=gcdN;FUN.lcm=(a,b)=>{const g=gcdN(a,b);return g?Math.abs(Math.round(a)/g*Math.round(b)):0};FUN.mod=(a,b)=>{if(!b)throw 0;return((a%b)+b)%b};
+function tok(s){const t=[];s=s.replace(/\s+/g,'');let i=0;
+ while(i<s.length){const r=s.slice(i);let m;
+  if(m=r.match(/^(\d+\.?\d*|\.\d+)(e[+-]?\d+)?/)){t.push({n:parseFloat(m[0])});i+=m[0].length;continue}
+  if(/^ans/i.test(r)){t.push({a:1});i+=3;continue}
+  if(m=r.match(/^[A-Za-z_]\w*/)){if(m[0] in VARS){t.push({k:VARS[m[0]]});i+=m[0].length;continue}}
+  const nm=NM.find(n=>r.startsWith(n));
+  if(nm){t.push({f:nm});i+=nm.length;continue}
+  const c=s[i++];
+  if(c==='π')t.push({k:Math.PI});else if(c==='ℯ')t.push({k:Math.E});else if(c==='x')t.push({x:1});else if(c==='√')t.push({f:'sqrt'});
+  else if('+−-×*÷/^(),%!'.includes(c))t.push({o:c});else throw 0}
+ return t}
+function parse(s){const T=tok(s);let p=0,P=false;
+ const is=(...c)=>T[p]&&T[p].o!==undefined&&c.includes(T[p].o);
+ const st=o=>o&&(o.n!==undefined||o.k!==undefined||o.x||o.a||o.f||o.o==='(');
+ const Pr=()=>{const t=T[p++];if(!t)throw 0;
+  if(t.n!==undefined){const n=t.n;return()=>n}
+  if(t.k!==undefined){const k=t.k;return()=>k}
+  if(t.x)return()=>X;
+  if(t.a)return()=>ANSV;
+  if(t.o==='('){const e=E();if(is(')'))p++;return e}
+  if(t.f){const f=FUN[t.f];let a=[];
+   if(is('(')){p++;if(!is(')')){a.push(E());while(is(',')){p++;a.push(E())}}if(is(')'))p++}else a=[Po()];
+   return()=>f(...a.map(g=>g()))}
+  throw 0};
+ const Po=()=>{let v=Pr(),pc=false;while(is('!','%')){const o=T[p++].o,a=v;if(o==='!')v=()=>fact(a());else{v=()=>a()/100;pc=true}}P=pc;return v};
+ const Pw=()=>{const b=Po();if(is('^')){p++;const e=U();P=false;return()=>Math.pow(b(),e())}return b};
+ const U=()=>{if(is('-','−')){p++;const a=U();return()=>-a()}if(is('+')){p++;return U()}return Pw()};
+ const Tm=()=>{let l=U(),pc=P;for(;;){let m,r;if(is('×','*','÷','/')){m=is('×','*');p++;r=U()}else if(st(T[p])){m=true;r=U()}else break;const a=l,b=r;l=m?()=>a()*b():()=>a()/b();pc=false}P=pc;return l};
+ const E=()=>{let l=Tm();while(is('+','-','−')){const m=T[p++].o==='+';let r=Tm();const a=l;if(P){const b0=r;r=()=>a()*b0()}const b=r;l=m?()=>a()+b():()=>a()-b()}return l};
+ const root=E();if(p<T.length)throw 0;return root}
+const clean=r=>Math.abs(r)<1e-12?0:+r.toPrecision(12);
+function run(src,o={}){DEG=o.deg??S.deg;ANSV=o.ans??ans;X=0;const r=parse(src)();if(typeof r!=='number'||!isFinite(r))throw 0;return clean(r)}
+function fnOf(src,radOnly){const f=parse(src);return x=>{DEG=radOnly?false:S.deg;ANSV=ans;X=x;return f()}}
+function frac(x){if(!isFinite(x)||Number.isInteger(x))return null;const s=x<0?'-':'';x=Math.abs(x);let h1=1,h0=0,k1=0,k0=1,b=x;
+ for(let i=0;i<24;i++){const a=Math.floor(b);[h1,h0]=[a*h1+h0,h1];[k1,k0]=[a*k1+k0,k1];if(k1>2000)return null;if(Math.abs(x-h1/k1)<1e-9*Math.max(1,x))return k1===1?null:s+h1+'/'+k1;b=1/(b-a);if(!isFinite(b))break}return null}
+function alt(x){if(!isFinite(x)||Number.isInteger(x))return '';let f=frac(x);if(f)return f;const r=x/Math.PI;
+ if(Math.abs(r)<1000){f=frac(r);if(f)return f.replace(/^(-?)(\d+)\/(\d+)$/,(m,s,n,d)=>s+(n==='1'?'':n)+'π/'+d);if(Number.isInteger(r)&&r)return (r===1?'':r===-1?'-':r)+'π'}return ''}
+function fmt(r){if(typeof r!=='number'||!isFinite(r))return '—';if(r===0)return '0';const a=Math.abs(r);
+ if(a>=1e15||a<1e-7)return r.toExponential(6).replace(/\.?0+e/,'e');
+ if(S.prec>0)return r.toFixed(S.prec);
+ return String(+r.toPrecision(12))}
+/* ====== HELPERS ====== */
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
+function buzz(k){if(!S.haptic)return;const hp=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Haptics,st=['LIGHT','MEDIUM','HEAVY'][(S.hs||2)-1];
+ try{if(hp){const r=k==='ok'?hp.notification({type:'SUCCESS'}):k==='err'?hp.notification({type:'ERROR'}):hp.impact({style:st});if(r&&r.catch)r.catch(()=>{});return}}catch(e){}
+ try{navigator.vibrate&&navigator.vibrate(k==='err'?[25,40,25]:k==='ok'?[15,30,15]:[10,20,35][(S.hs||2)-1])}catch(e){}}
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),1500)}
+function copy(t,m){try{navigator.clipboard.writeText(String(t));toast(m||'Copied '+t)}catch(e){toast('Copy not available')}}
+const saveS=()=>store('nx-set',S);
+const q=x=>fmt(+(+x).toPrecision(8));
+let gcol={line:'rgba(255,255,255,.1)',tx:'#f4f3ff',mut:'#8b88a8'};
+function gColors(){const cs=getComputedStyle(document.documentElement);gcol={line:cs.getPropertyValue('--line'),tx:cs.getPropertyValue('--tx').trim(),mut:cs.getPropertyValue('--mut').trim()}}
+function applyTheme(){document.documentElement.classList.toggle('lite',!!S.lite);document.documentElement.dataset.theme=S.theme;$('#tc').content=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();$('#degBtn').textContent=S.deg?'Deg':'Rad';$('#degBtn').classList.toggle('on',S.deg);gColors();if(typeof gctx!=='undefined'&&gctx)gDraw()}
+
+/* ====== CALCULATOR ====== */
+const OPS='+−×÷^';let expr='',fresh=false,mem=0,hist=load('nx-hist',[]);
+const stdKeys=[['AC','AC','fn ac'],['( )','()','fn'],['%','%','fn'],['÷','÷','op'],['7','7'],['8','8'],['9','9'],['×','×','op'],['4','4'],['5','5'],['6','6'],['−','−','op'],['1','1'],['2','2'],['3','3'],['+','+','op'],['0','0'],['.','.'],['⌫','BS','fn'],['=','=','eq']];
+const sciKeys=[['sin','sin(','fn'],['cos','cos(','fn'],['tan','tan(','fn'],['ln','ln(','fn'],['log','log(','fn'],['√','√(','fn'],['π','π','fn'],['ℯ','ℯ','fn'],['asin','asin(','fn'],['acos','acos(','fn'],['atan','atan(','fn'],['xʸ','^','fn'],['x²','^2','fn'],['n!','!','fn'],['|x|','abs(','fn'],['nCr','nCr(','fn'],['nPr','nPr(','fn'],[',',',','fn'],['ANS','ANS','fn'],['M+','M+','fn'],['MR','MR','fn'],['MC','MC','fn'],['∛','cbrt(','fn'],['1/x','INV','fn'],['HCF','hcf(','fn'],['LCM','lcm(','fn'],['mod','mod(','fn'],['sinh','sinh(','fn'],['cosh','cosh(','fn'],['tanh','tanh(','fn']];
+function mk(box,keys){keys.forEach(([l,v,c])=>{const b=el('button','key '+(c||''),l);b.dataset.v=v;box.append(b)})}
+mk($('#pad'),stdKeys);mk($('#sci'),sciKeys);
+$('#v-calc').addEventListener('pointerdown',e=>{const b=e.target.closest('.key');if(b){e.preventDefault();buzz();press(b.dataset.v)}});
+$('#sciBtn').onclick=()=>{buzz();$('#sci').classList.toggle('open');$('#sciBtn').classList.toggle('on')};
+$('#degBtn').onclick=()=>{buzz();S.deg=!S.deg;saveS();applyTheme();draw()};
+function ins(t){if(fresh)expr='';fresh=false;expr+=t;draw()}
+function press(v){
+ const last=expr.slice(-1);
+ switch(v){
+  case'AC':expr='';fresh=false;$('#last').textContent='';return draw();
+  case'BS':expr=expr.replace(/(asin|acos|atan|sinh|cosh|tanh|sin|cos|tan|ln|log|abs|cbrt|nCr|nPr|gcd|hcf|lcm|mod|√)\($|ANS$|.$/,'');return draw();
+  case'=':return equals();
+  case'M+':try{mem+=run(expr||String(ans));$('#mb').classList.toggle('on',mem!==0);toast('Memory = '+fmt(mem))}catch(e){}return;
+  case'MR':return ins(String(mem));
+  case'MC':mem=0;$('#mb').classList.remove('on');return toast('Memory cleared');
+  case'INV':if(expr){expr='1÷('+expr+')';fresh=false;draw()}return;
+ }
+ const isOp=OPS.includes(v);
+ if(fresh&&!isOp&&v!=='%'&&v!=='!')expr='';
+ fresh=false;
+ if(v==='()'){const o=(expr.match(/\(/g)||[]).length,c=(expr.match(/\)/g)||[]).length;v=(o>c&&/([\d)πℯ%!]|ANS)$/.test(expr))?')':'('}
+ if(isOp){
+  if(!expr){if(v!=='−')expr='0'}
+  else if(OPS.includes(last)&&!(v==='−'&&'×÷'.includes(last)))expr=expr.slice(0,-1);
+  else if(last==='('&&v!=='−')return}
+ if(v==='.'&&(expr.match(/[\d.]*$/)[0]).includes('.'))return;
+ if((v==='%'||v==='!')&&(!expr||OPS.includes(last)||last==='('))return;
+ expr+=v;draw();
+}
+function equals(){if(!expr)return;try{const r=run(expr);hist.unshift({e:expr,r:String(r)});hist=hist.slice(0,80);store('nx-hist',hist);$('#last').textContent=expr+' =';ans=r;expr=String(r);fresh=true;draw(true);buzz('ok')}catch(e){$('#prev').textContent='Check the expression';buzz('err')}}
+function draw(done){
+ const m=$('#main');m.textContent=expr||'0';const n=m.textContent.length;
+ const base=(innerHeight<700||(innerWidth>=640&&innerWidth>innerHeight))?42:54;
+ m.style.fontSize=Math.round(base*(n<=8?1:n<=11?.82:n<=15?.64:.5))+'px';m.scrollLeft=m.scrollWidth;
+ let p='';
+ if(expr){try{const r=run(expr),a=alt(r),simple=/^[−-]?[\d.]+(e[+-]?\d+)?$/.test(expr);
+  if(done)p=a?'= '+a:'';else if(!simple)p='= '+fmt(r)+(a?'   ('+a+')':'')}catch(e){}}
+ $('#prev').textContent=p;
+}
+document.addEventListener('keydown',e=>{
+ if(cur.v!=='calc'||/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)||e.ctrlKey||e.metaKey)return;
+ const k=e.key,map={'*':'×','/':'÷','-':'−','Enter':'=','=':'=','Backspace':'BS','Escape':'AC','Delete':'AC','(':'()',')':'()','!':'!'};
+ if(/^[0-9.+%^]$/.test(k))press(k);else if(map[k]){e.preventDefault();press(map[k])}
+});
+
+/* ====== NAVIGATION ====== */
+let cur={v:'calc',t:null};
+function go(v,t,push=true){
+ cur={v,t:t||null};
+ $$('.view').forEach(x=>x.classList.toggle('on',x.id==='v-'+v));
+ $$('#dock button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+ if(v==='tools')showTool(t);if(v==='hist')renderHist();if(v==='set')renderSet();if(v==='graph')requestAnimationFrame(gResize);if(v==='calc')draw(fresh);
+ if(push)history.pushState(cur,'');
+}
+$('#dock').onclick=e=>{const b=e.target.closest('button');if(b){buzz();go(b.dataset.v)}};
+$('#tback').onclick=()=>history.back();
+addEventListener('popstate',e=>{const s=e.state||{v:'calc'};go(s.v,s.t,false)});
+addEventListener('resize',()=>{gResize();draw(fresh)});
+
+/* ====== HISTORY ====== */
+function renderHist(){const b=$('#hist');b.innerHTML='';
+ if(!hist.length){b.append(el('div','empty','Nothing here yet.\nFinish a calculation and it will show up.'));b.firstChild.style.whiteSpace='pre-line';return}
+ hist.forEach(h=>{const d=el('div','h glass');d.append(el('small','',h.e),el('strong','',h.r));d.onclick=()=>{expr=h.r;fresh=true;$('#last').textContent=h.e+' =';go('calc');toast('Loaded '+h.r)};b.append(d)})}
+$('#hclear').onclick=()=>{hist=[];store('nx-hist',hist);renderHist()};
+
+/* ====== SETTINGS ====== */
+function renderSet(){const b=$('#setbox');b.innerHTML='';
+ const row=(t,s,c)=>{const r=el('div','setrow'),l=el('div');l.append(el('div','',t));if(s)l.append(el('small','',s));r.append(l,c);b.append(r)};
+ const sw=el('div','sw');[['xeniq','#7c3aed,#e879f9'],['nexus','#8b5cf6,#22d3ee'],['ember','#f97316,#fbbf24'],['matrix','#10b981,#a3e635'],['amoled','#000,#555'],['paper','#f3f1ff,#7c3aed']].forEach(([n,g])=>{const x=el('button',S.theme===n?'on':'');x.style.background='linear-gradient(135deg,'+g+')';x.setAttribute('aria-label',n);x.onclick=()=>{S.theme=n;saveS();applyTheme();renderSet()};sw.append(x)});
+ row('Theme','XENIQ purple, Nexus, Ember, Matrix, AMOLED, Paper',sw);
+ const tg=(k,after)=>{const t=el('button','tg'+(S[k]?' on':''));t.onclick=()=>{S[k]=!S[k];saveS();t.classList.toggle('on',S[k]);if(after)after()};return t};
+ row('Haptic feedback','Vibration on key press',tg('haptic'));
+ const hs=el('select','inp');hs.style.width='110px';[[1,'Light'],[2,'Medium'],[3,'Strong']].forEach(([v,l])=>{const o=el('option','',l);o.value=v;hs.append(o)});hs.value=S.hs||2;hs.onchange=()=>{S.hs=+hs.value;saveS();buzz()};
+ row('Haptic strength','Change it to feel each level',hs);
+ row('Lite mode','Turns off animations. Try it if your phone feels slow',tg('lite',applyTheme));
+ row('Degrees for trig','Off = radians',tg('deg',()=>{applyTheme();draw()}));
+ const sel=el('select','inp');sel.style.width='110px';[[0,'Auto'],[2,'2'],[3,'3'],[4,'4'],[6,'6'],[8,'8']].forEach(([v,l])=>{const o=el('option','',l);o.value=v;sel.append(o)});sel.value=S.prec;sel.onchange=()=>{S.prec=+sel.value;saveS();draw()};
+ row('Decimal places','Applies to results in tools',sel);
+ const rs=el('button','ghost','Reset all app data');rs.style.cssText='margin:12px 0;width:auto;padding:10px 14px';let armed=0;
+ rs.onclick=()=>{if(!armed){armed=1;rs.textContent='Tap again to confirm';setTimeout(()=>{armed=0;rs.textContent='Reset all app data'},3000);return}try{['nx-set','nx-hist','nx-nb'].forEach(k=>localStorage.removeItem(k))}catch(e){}location.reload()};
+ row('Storage','History, notebook and settings',rs)}
+
+/* ====== TOOL MATH HELPERS ====== */
+const nums=s=>s.split(/[,;\s]+/).filter(Boolean).map(Number);
+const chk=a=>{if(a.some(isNaN))throw Error('Only numbers please');return a};
+const mat=s=>{const M=s.split(/;|\n/).map(r=>r.trim()).filter(Boolean).map(r=>chk(nums(r)));if(!M.length||M.some(r=>r.length!==M[0].length))throw Error('Rows must be equal length. Separate rows with ;');return M};
+const sub=n=>String(n).replace(/\d/g,d=>'₀₁₂₃₄₅₆₇₈₉'[d]);
+const mstr=M=>M.map(r=>r.map(x=>fmt(clean(x))).join('   ')).join('\n');
+const mmul=(A,B)=>{if(A[0].length!==B.length)throw Error('Columns of A must equal rows of B');return A.map(r=>B[0].map((_,j)=>r.reduce((s,x,k)=>s+x*B[k][j],0)))};
+const madd=(A,B,s=1)=>{if(A.length!==B.length||A[0].length!==B[0].length)throw Error('Matrices must be the same size');return A.map((r,i)=>r.map((x,j)=>x+s*B[i][j]))};
+function det(A){const n=A.length;if(A[0].length!==n)throw Error('Matrix must be square');const M=A.map(r=>[...r]);let d=1;for(let i=0;i<n;i++){let p=i;for(let r=i+1;r<n;r++)if(Math.abs(M[r][i])>Math.abs(M[p][i]))p=r;if(Math.abs(M[p][i])<1e-12)return 0;if(p!==i){[M[p],M[i]]=[M[i],M[p]];d=-d}d*=M[i][i];for(let r=i+1;r<n;r++){const f=M[r][i]/M[i][i];for(let c=i;c<n;c++)M[r][c]-=f*M[i][c]}}return d}
+function inv(A){const n=A.length;if(A[0].length!==n)throw Error('Matrix must be square');const M=A.map((r,i)=>[...r,...Array.from({length:n},(_,j)=>+(i===j))]);for(let i=0;i<n;i++){let p=i;for(let r=i+1;r<n;r++)if(Math.abs(M[r][i])>Math.abs(M[p][i]))p=r;if(Math.abs(M[p][i])<1e-12)throw Error('Singular matrix: no inverse exists');[M[p],M[i]]=[M[i],M[p]];const d=M[i][i];M[i]=M[i].map(x=>x/d);for(let r=0;r<n;r++)if(r!==i){const f=M[r][i];M[r]=M[r].map((x,c)=>x-f*M[i][c])}}return M.map(r=>r.slice(n))}
+function gauss(M){const n=M.length,A=M.map(r=>[...r]);for(let i=0;i<n;i++){let p=i;for(let r=i+1;r<n;r++)if(Math.abs(A[r][i])>Math.abs(A[p][i]))p=r;if(Math.abs(A[p][i])<1e-12)throw Error('No unique solution');[A[p],A[i]]=[A[i],A[p]];const d=A[i][i];A[i]=A[i].map(x=>x/d);for(let r=0;r<n;r++)if(r!==i){const f=A[r][i];A[r]=A[r].map((x,c)=>x-f*A[i][c])}}return A.map(r=>r[n])}
+function charPoly(A){const n=A.length;if(A[0].length!==n)throw Error('Matrix must be square');let M=A.map(r=>r.map(()=>0)),c=[1];for(let k=1;k<=n;k++){M=mmul(A,M).map((r,i)=>r.map((x,j)=>x+(i===j?c[k-1]:0)));c.push(-mmul(A,M).reduce((s,r,i)=>s+r[i],0)/k)}return c}
+const cadd=(a,b)=>[a[0]+b[0],a[1]+b[1]],csub=(a,b)=>[a[0]-b[0],a[1]-b[1]],cmul=(a,b)=>[a[0]*b[0]-a[1]*b[1],a[0]*b[1]+a[1]*b[0]];
+const cdiv=(a,b)=>{const d=b[0]*b[0]+b[1]*b[1];if(!d)throw Error('Division by zero');return[(a[0]*b[0]+a[1]*b[1])/d,(a[1]*b[0]-a[0]*b[1])/d]};
+function cpar(s){s=s.replace(/\s+/g,'').replace(/j/g,'i');if(!s)throw Error('Enter a complex number like 3+4i');
+ if(!s.includes('i')){const r=Number(s);if(isNaN(r))throw Error('Use the form 3+4i');return[r,0]}
+ const m=s.match(/^(.*?)([+-]?[\d.]*(?:e[+-]?\d+)?)i$/);if(!m)throw Error('Use the form 3+4i');
+ const re=m[1]?Number(m[1]):0;let im=m[2];im=(im===''||im==='+')?1:im==='-'?-1:Number(im);if(isNaN(re)||isNaN(im))throw Error('Use the form 3+4i');return[re,im]}
+const cstr=([a,b])=>{a=clean(a);b=clean(b);if(!b)return fmt(a);if(!a)return fmt(b)+'i';return fmt(a)+(b<0?' − ':' + ')+fmt(Math.abs(b))+'i'};
+function roots(c){const n=c.length-1;if(n<1)throw Error('Need degree 1 or higher');if(n===1)return[[-c[1]/c[0],0]];
+ const a=c.map(x=>x/c[0]);const z=Array.from({length:n},(_,k)=>{let r=[1,0];for(let i=0;i<k;i++)r=cmul(r,[.4,.9]);return r});
+ for(let it=0;it<500;it++){let mv=0;for(let i=0;i<n;i++){let num=[1,0];for(let k=1;k<=n;k++)num=cadd(cmul(num,z[i]),[a[k],0]);let den=[1,0];for(let j=0;j<n;j++)if(j!==i)den=cmul(den,csub(z[i],z[j]));const d=cdiv(num,den);z[i]=csub(z[i],d);mv=Math.max(mv,Math.hypot(d[0],d[1]))}if(mv<1e-14)break}
+ return z.map(([r,i])=>[Math.abs(r)<1e-9?0:r,Math.abs(i)<1e-9?0:i]).sort((p,s)=>p[0]-s[0]||p[1]-s[1])}
+const bigS=b=>{const s=b.toString();return s.length>24?s[0]+'.'+s.slice(1,8)+'e+'+(s.length-1)+'  ('+s.length+' digits)':s};
+const gcd=(a,b)=>b?gcd(b,a%b):a;
+function pf(n){const f=[];for(let p=2;p*p<=n;p++){let e=0;while(n%p===0){n/=p;e++}if(e)f.push([p,e])}if(n>1)f.push([n,1]);return f}
+const med=a=>{const n=a.length,m=n>>1;return n%2?a[m]:(a[m-1]+a[m])/2};
+const TODAY=new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+const dt=s=>{if(!s)throw Error('Pick a date');return new Date(s+'T00:00')};
+const ymd=(a,b)=>{let y=b.getFullYear()-a.getFullYear(),m=b.getMonth()-a.getMonth(),d=b.getDate()-a.getDate();if(d<0){m--;d+=new Date(b.getFullYear(),b.getMonth(),0).getDate()}if(m<0){y--;m+=12}return y+' years, '+m+' months, '+d+' days'};
+const U={length:{meters:1,kilometers:1000,centimeters:.01,millimeters:.001,miles:1609.344,yards:.9144,feet:.3048,inches:.0254,'nautical miles':1852},
+weight:{kilograms:1,grams:.001,milligrams:1e-6,tonnes:1000,pounds:.45359237,ounces:.0283495},
+temperature:{celsius:0,fahrenheit:0,kelvin:0},
+area:{'sq meters':1,'sq kilometers':1e6,'sq feet':.09290304,'sq miles':2589988.11,acres:4046.8564,hectares:1e4},
+volume:{liters:1,milliliters:.001,'cubic meters':1000,gallons:3.785411784,pints:.473176473},
+speed:{'m/s':1,'km/h':1/3.6,mph:.44704,knots:.514444},
+time:{seconds:1,minutes:60,hours:3600,days:86400,weeks:604800,years:31557600},
+data:{bytes:1,kilobytes:1024,megabytes:1048576,gigabytes:1073741824,terabytes:1099511627776},
+energy:{joules:1,kilojoules:1000,calories:4.184,kilocalories:4184,'watt-hours':3600,'kilowatt-hours':3.6e6,electronvolts:1.602176634e-19},
+pressure:{pascals:1,kilopascals:1000,bar:1e5,atm:101325,psi:6894.757,mmHg:133.322},
+power:{watts:1,kilowatts:1000,horsepower:745.7},
+angle:{degrees:1,radians:180/Math.PI,gradians:.9,turns:360}};
+const CONSTS=[['Speed of light','c','299792458','m/s'],['Gravity (Earth)','g','9.80665','m/s²'],['Gravitational constant','G','6.6743e-11','N·m²/kg²'],['Planck constant','h','6.62607015e-34','J·s'],['Reduced Planck','ħ','1.054571817e-34','J·s'],['Elementary charge','e','1.602176634e-19','C'],['Electron mass','mₑ','9.1093837015e-31','kg'],['Proton mass','mₚ','1.67262192369e-27','kg'],['Neutron mass','mₙ','1.67492749804e-27','kg'],['Boltzmann constant','k','1.380649e-23','J/K'],['Avogadro number','Nₐ','6.02214076e23','1/mol'],['Gas constant','R','8.314462618','J/(mol·K)'],['Coulomb constant','kₑ','8.9875517923e9','N·m²/C²'],['Permittivity of vacuum','ε₀','8.8541878128e-12','F/m'],['Permeability of vacuum','μ₀','1.25663706212e-6','N/A²'],['Stefan–Boltzmann','σ','5.670374419e-8','W/(m²·K⁴)'],['Rydberg constant','R∞','10973731.568','1/m'],['Faraday constant','F','96485.33212','C/mol'],['Atmospheric pressure','atm','101325','Pa'],['Earth mass','M⊕','5.972e24','kg'],['Earth radius','R⊕','6.371e6','m'],['Sun mass','M☉','1.989e30','kg'],['Astronomical unit','AU','1.495978707e11','m'],['Light year','ly','9.4607e15','m']];
+const SH={circle:['Radius'],rect:['Length','Width'],tri:['Side a','Side b','Side c'],sph:['Radius'],cyl:['Radius','Height'],cone:['Radius','Height'],cube:['Side'],cub:['Length','Width','Height'],trap:['Parallel side a','Parallel side b','Height']};
+
+/* ====== TOOLS ====== */
+
+const sup=n=>String(n).replace(/\d/g,d=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[d]);
+const bgcd=(a,b)=>{while(b){[a,b]=[b,a%b]}return a};
+const pfs=f=>f.length?f.map(([p,e])=>e>1?p+sup(e):p).join(' × '):'1';
+const fs=([n,d])=>{const g=gcd(Math.abs(n),d)||1;return[n/g,d/g]};
+const fstr=([n,d])=>d===1?String(n):n+'/'+d;
+const mixed=([n,d])=>{if(d===1||Math.abs(n)<d)return null;return Math.trunc(n/d)+' '+(Math.abs(n)%d)+'/'+d};
+function pfr(s){s=s.trim();if(!s)throw Error('Enter a fraction like 3/4 or 1 1/2');let m;
+ if(m=s.match(/^(-?)(\d+)\s+(\d+)\s*\/\s*(\d+)$/)){if(+m[4]===0)throw Error('Denominator cannot be 0');return fs([(m[1]?-1:1)*(+m[2]*+m[4]+ +m[3]),+m[4]])}
+ if(m=s.match(/^(-?\d+)\s*\/\s*(\d+)$/)){if(+m[2]===0)throw Error('Denominator cannot be 0');return fs([+m[1],+m[2]])}
+ if(/^-?\d*\.?\d+$/.test(s)){const k=(s.split('.')[1]||'').length;if(k>9)throw Error('Too many decimal places');return fs([Math.round(+s*10**k),10**k])}
+ throw Error('Use forms like 3/4, 1 1/2, 0.75 or 5')}
+const fres=(F,t)=>{const o=[[t,fstr(F),1,1]],mx=mixed(F);if(mx)o.push(['Mixed number',mx]);o.push(['Decimal',fmt(F[0]/F[1])],['Percentage',fmt(F[0]/F[1]*100)+'%']);return o};
+const NEWTOOLS=[
+{id:'lh',ic:'HCF',n:'LCM & HCF',d:'With full steps: prime factors and division method',f:[{k:'n',l:'Numbers   (2 or more, commas or spaces)',t:'t',ph:'12, 18, 24'}],
+ run(v){if(!v.n.trim())return[];const a=chk(nums(v.n));if(a.length<2)throw Error('Enter at least two numbers');if(a.some(x=>x<1||!Number.isInteger(x)||x>1e12))throw Error('Use whole numbers from 1 to 10¹²');
+  const G=a.reduce((x,y)=>gcd(x,y)),L=a.map(BigInt).reduce((x,y)=>x/bgcd(x,y)*y),F=a.map(pf),pr=[...new Set(F.flatMap(f=>f.map(p=>p[0])))].sort((x,y)=>x-y),ex=(f,p)=>(f.find(z=>z[0]===p)||[0,0])[1];
+  const lo=pr.map(p=>[p,Math.min(...F.map(f=>ex(f,p)))]).filter(z=>z[1]>0),hi=pr.map(p=>[p,Math.max(...F.map(f=>ex(f,p)))]);
+  const out=[['HCF (GCD)',G,0,1],['LCM',L.toString(),0,1],['Prime factors',a.map((x,i)=>x+' = '+pfs(F[i])).join('\n'),1],
+   ['HCF = common primes, lowest power',(lo.length?pfs(lo)+' = ':'No common prime, so ')+G,1],['LCM = all primes, highest power',pfs(hi)+' = '+L,1]];
+  if(a.length===2){let[x,y]=a[0]>=a[1]?[a[0],a[1]]:[a[1],a[0]];const st=[];while(y){st.push(x+' = '+Math.floor(x/y)+' × '+y+' + '+(x%y));[x,y]=[y,x%y]}
+   out.push(['Division method',st.join('\n')+'\nLast divisor = '+x+' = HCF',1],['Check: HCF × LCM = a × b',G+' × '+L+' = '+(BigInt(G)*L)+' = '+a[0]+' × '+a[1],1])}
+  if(G===1)out.push(['Co-prime?','Yes, they have no common factor',1]);return out}},
+{id:'frc',ic:'½',n:'Fractions',d:'Add, subtract, multiply, divide, simplify, compare',f:[
+ {k:'a',l:'First fraction   (3/4, 1 1/2, 0.75 or 5)',t:'t',ph:'3/4'},
+ {k:'o',l:'Operation',t:'s',o:[['+','Add'],['-','Subtract'],['*','Multiply'],['/','Divide'],['cmp','Compare']]},
+ {k:'b',l:'Second fraction   (leave empty to just simplify)',t:'t',ph:'5/6'}],
+ run(v){if(!v.a.trim())return[];const A=pfr(v.a);if(!v.b.trim())return fres(A,'Simplified');const B=pfr(v.b),[n1,d1]=A,[n2,d2]=B;let R,st=[];
+  if(v.o==='cmp'){const l=n1*d2,r=n2*d1;return[['Comparison',fstr(A)+(l>r?'  >  ':l<r?'  <  ':'  =  ')+fstr(B),1,1],['Cross multiply',n1+' × '+d2+' = '+l+'   and   '+n2+' × '+d1+' = '+r,1]]}
+  if(v.o==='+'||v.o==='-'){const L=d1/gcd(d1,d2)*d2;R=[n1*(L/d1)+(v.o==='+'?1:-1)*n2*(L/d2),L];st.push('LCM of denominators '+d1+' and '+d2+' = '+L)}
+  else if(v.o==='*')R=[n1*n2,d1*d2];
+  else{if(!n2)throw Error('Cannot divide by zero');R=[n1*d2,d1*n2];if(R[1]<0)R=[-R[0],-R[1]];st.push('Flip the second fraction, then multiply')}
+  const S=fs(R),out=fres(S,'Answer');if(st.length)out.push(['Steps',st.join('\n'),1]);if(fstr(R)!==fstr(S))out.push(['Before simplifying',fstr(R)+'   ÷ HCF '+gcd(Math.abs(R[0]),R[1])+'   →   '+fstr(S),1]);return out}},
+{id:'pct',ic:'%',n:'Percent & ratio',d:'Percentages, increase/decrease, ratios, proportion',f:[
+ {k:'m',l:'Find',t:'s',o:[['of','X% of Y'],['is','X is what % of Y'],['up','Increase Y by X%'],['down','Decrease Y by X%'],['ratio','Simplify a ratio'],['prop','Solve  a / b = c / x']]},
+ {k:'a',l:v=>({of:'Percent X',is:'X',up:'Percent X',down:'Percent X',prop:'a'})[v.m],t:'n',show:v=>v.m!=='ratio'},
+ {k:'b',l:v=>({of:'Number Y',is:'Y',up:'Number Y',down:'Number Y',prop:'b'})[v.m],t:'n',show:v=>v.m!=='ratio'},
+ {k:'c',l:'c',t:'n',show:v=>v.m==='prop'},
+ {k:'r',l:'Ratio   (12:18:30)',t:'t',ph:'12:18:30',show:v=>v.m==='ratio'}],
+ run(v){if(v.m==='ratio'){if(!v.r.trim())return[];const p=chk(v.r.split(/[:,\s]+/).filter(Boolean).map(Number));if(p.length<2||p.some(x=>x<=0))throw Error('Enter 2 or more positive numbers');
+   const k=Math.max(...v.r.split(/[:,\s]+/).map(s=>(s.split('.')[1]||'').length)),w=p.map(x=>Math.round(x*10**k)),g=w.reduce((x,y)=>gcd(x,y)),s=w.map(x=>x/g),t=s.reduce((x,y)=>x+y,0);
+   return[['Simplest ratio',s.join(' : '),1,1],['Total parts',t],['Share of the whole',s.map(x=>fstr(fs([x,t]))).join('   ·   ')]]}
+  const a=+v.a,b=+v.b;if(v.a===''||v.b==='')return[];
+  if(v.m==='of')return[['Answer',q(a*b/100),1,1]];
+  if(v.m==='is'){if(!b)throw Error('Y cannot be 0');return[['Percentage',q(a/b*100)+'%',1,1]]}
+  if(v.m==='up'||v.m==='down'){const r=b*(1+(v.m==='up'?1:-1)*a/100);return[['New value',q(r),0,1],['Change',q(Math.abs(r-b))]]}
+  if(v.c==='')return[];if(!a)throw Error('a cannot be 0');return[['x',q(b*(+v.c)/a),1,1],['Working','x = (b × c) ÷ a = ('+q(b)+' × '+q(+v.c)+') ÷ '+q(a),1]]}},
+{id:'rt',ic:'√',n:'Squares & roots',d:'Square, cube, roots, perfect square check',f:[{k:'n',l:'Number',t:'n',ph:'144'},{k:'k',l:'Other root index   (optional, e.g. 4)',t:'n',ph:'4'}],
+ run(v){if(v.n==='')return[];const n=+v.n,out=[['n²',q(n*n)],['n³',q(n**3)],['√n',n<0?cstr([0,Math.sqrt(-n)]):q(Math.sqrt(n)),0,1],['∛n',q(Math.cbrt(n)),0,1],['1 ÷ n',n?q(1/n):'—']];
+  if(v.k!==''&&+v.k>=2&&(n>=0||+v.k%2===1)){const k=Math.round(+v.k);out.push([k+'th root',q(Math.sign(n)*Math.pow(Math.abs(n),1/k)),1])}
+  if(Number.isInteger(n)&&n>=0){const s=Math.sqrt(n),c=Math.cbrt(n);out.push(['Perfect square?',Number.isInteger(s)?'Yes, '+s+'²':'No, between '+Math.floor(s)**2+' and '+(Math.floor(s)+1)**2],['Perfect cube?',Math.abs(c-Math.round(c))<1e-9?'Yes, '+Math.round(c)+'³':'No'])}return out}},
+{id:'tbl',ic:'×',n:'Multiplication table',d:'Table of any number, any length',f:[{k:'n',l:'Table of',t:'n',def:'7'},{k:'m',l:'Up to',t:'n',def:'10'}],
+ run(v){if(v.n==='')return[];const n=+v.n,m=Math.min(100,Math.max(1,Math.round(+v.m||10)));return[['Table of '+fmt(n),Array.from({length:m},(_,i)=>fmt(n)+' × '+(i+1)+' = '+fmt(clean(n*(i+1)))).join('\n'),1]]}},
+];
+const RM=[[1000,'M'],[900,'CM'],[500,'D'],[400,'CD'],[100,'C'],[90,'XC'],[50,'L'],[40,'XL'],[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']];
+const toRom=n=>{let r='';RM.forEach(([v,c])=>{while(n>=v){r+=c;n-=v}});return r};
+const ON=['','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'],TN=['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+const w99=n=>n<20?ON[n]:TN[n/10|0]+(n%10?'-'+ON[n%10]:'');
+const w999=n=>(n>=100?ON[n/100|0]+' hundred'+(n%100?' and ':''):'')+(n%100?w99(n%100):'');
+function wInd(n){if(n===0)return'zero';const r=[];for(const[d,nm]of[[1e7,'crore'],[1e5,'lakh'],[1e3,'thousand']]){if(n>=d){const k=Math.floor(n/d);r.push((nm==='crore'&&k>=100?wInd(k):w99(k))+' '+nm);n%=d}}if(n)r.push(w999(n));return r.join(' ')}
+function wInt(n){if(n===0)return'zero';const r=[];for(const[d,nm]of[[1e12,'trillion'],[1e9,'billion'],[1e6,'million'],[1e3,'thousand']]){if(n>=d){r.push(w999(Math.floor(n/d))+' '+nm);n%=d}}if(n)r.push(w999(n));return r.join(' ')}
+function erfc(x){const z=Math.abs(x),t=1/(1+.5*z),r=t*Math.exp(-z*z-1.26551223+t*(1.00002368+t*(.37409196+t*(.09678418+t*(-.18628806+t*(.27886807+t*(-1.13520398+t*(1.48851587+t*(-.82215223+t*.17087277)))))))));return x>=0?r:2-r}
+const AM={H:1.008,He:4.0026,Li:6.94,Be:9.0122,B:10.81,C:12.011,N:14.007,O:15.999,F:18.998,Ne:20.18,Na:22.99,Mg:24.305,Al:26.982,Si:28.085,P:30.974,S:32.06,Cl:35.45,Ar:39.948,K:39.098,Ca:40.078,Ti:47.867,Cr:51.996,Mn:54.938,Fe:55.845,Co:58.933,Ni:58.693,Cu:63.546,Zn:65.38,Br:79.904,Kr:83.798,Rb:85.468,Sr:87.62,Ag:107.87,Cd:112.41,Sn:118.71,I:126.9,Ba:137.33,W:183.84,Pt:195.08,Au:196.97,Hg:200.59,Pb:207.2,U:238.03};
+function molParse(s){const st=[{}];let i=0,m;while(i<s.length){const r=s.slice(i);if(m=r.match(/^([A-Z][a-z]?)(\d*)/)){const e=m[1];if(!AM[e])throw Error('Unknown element '+e);const o=st[st.length-1];o[e]=(o[e]||0)+(+m[2]||1);i+=m[0].length}else if(s[i]==='('||s[i]==='['){st.push({});i++}else if(m=r.match(/^[)\]](\d*)/)){const g=st.pop();if(!st.length)throw Error('Unbalanced brackets');const k=+m[1]||1,o=st[st.length-1];for(const e in g)o[e]=(o[e]||0)+g[e]*k;i+=m[0].length}else throw Error('Unexpected "'+s[i]+'"')}if(st.length!==1)throw Error('Unbalanced brackets');return st[0]}
+const PHY=[
+['Velocity: v = u + at','v:Final velocity (m/s),u:Initial velocity (m/s),a:Acceleration (m/s²),t:Time (s)','v=u+a*t;u=v-a*t;a=(v-u)/t;t=(v-u)/a'],
+['Distance: s = ut + ½at²','s:Distance (m),u:Initial velocity (m/s),a:Acceleration (m/s²),t:Time (s)','s=u*t+0.5*a*t^2;u=(s-0.5*a*t^2)/t;a=2*(s-u*t)/t^2;t=(-u+√(u^2+2*a*s))/a;t=(-u-√(u^2+2*a*s))/a'],
+['v² = u² + 2as','v:Final velocity (m/s),u:Initial velocity (m/s),a:Acceleration (m/s²),s:Distance (m)','v=√(u^2+2*a*s);u=√(v^2-2*a*s);a=(v^2-u^2)/(2*s);s=(v^2-u^2)/(2*a)'],
+['Speed = distance ÷ time','v:Speed,d:Distance,t:Time','v=d/t;d=v*t;t=d/v'],
+['Force: F = ma','F:Force (N),m:Mass (kg),a:Acceleration (m/s²)','F=m*a;m=F/a;a=F/m'],
+['Momentum: p = mv','p:Momentum (kg·m/s),m:Mass (kg),v:Velocity (m/s)','p=m*v;m=p/v;v=p/m'],
+['Work: W = F × d','W:Work (J),F:Force (N),d:Distance (m)','W=F*d;F=W/d;d=W/F'],
+['Power: P = W ÷ t','P:Power (W),W:Work (J),t:Time (s)','P=W/t;W=P*t;t=W/P'],
+['Kinetic energy: K = ½mv²','K:Energy (J),m:Mass (kg),v:Velocity (m/s)','K=0.5*m*v^2;m=2*K/v^2;v=√(2*K/m)'],
+['Potential energy: U = mgh','U:Energy (J),m:Mass (kg),h:Height (m)','U=m*9.80665*h;m=U/(9.80665*h);h=U/(m*9.80665)'],
+['Pressure: P = F ÷ A','P:Pressure (Pa),F:Force (N),A:Area (m²)','P=F/A;F=P*A;A=F/P'],
+['Density: ρ = m ÷ V','d:Density (kg/m³),m:Mass (kg),V:Volume (m³)','d=m/V;m=d*V;V=m/d'],
+['Ohm’s law: V = IR','V:Voltage (V),I:Current (A),R:Resistance (Ω)','V=I*R;I=V/R;R=V/I'],
+['Electric power: P = VI','P:Power (W),V:Voltage (V),I:Current (A)','P=V*I;V=P/I;I=P/V'],
+['Wave: v = fλ','v:Wave speed (m/s),f:Frequency (Hz),w:Wavelength (m)','v=f*w;f=v/w;w=v/f'],
+['Heat: Q = mcΔT','Q:Heat (J),m:Mass (kg),c:Specific heat (J/kg·K),T:Temperature change (K)','Q=m*c*T;m=Q/(c*T);c=Q/(m*T);T=Q/(m*c)'],
+['Gravitation: F = Gm₁m₂/r²','F:Force (N),m:Mass 1 (kg),n:Mass 2 (kg),r:Distance (m)','F=6.6743e-11*m*n/r^2;m=F*r^2/(6.6743e-11*n);n=F*r^2/(6.6743e-11*m);r=√(6.6743e-11*m*n/F)'],
+['Coulomb: F = kq₁q₂/r²','F:Force (N),q:Charge 1 (C),p:Charge 2 (C),r:Distance (m)','F=8.9875517923e9*q*p/r^2;q=F*r^2/(8.9875517923e9*p);p=F*r^2/(8.9875517923e9*q);r=√(8.9875517923e9*q*p/F)'],
+['Centripetal: F = mv²/r','F:Force (N),m:Mass (kg),v:Speed (m/s),r:Radius (m)','F=m*v^2/r;m=F*r/v^2;v=√(F*r/m);r=m*v^2/F'],
+['Pendulum: T = 2π√(L/g)','T:Time period (s),L:Length (m)','T=2*π*√(L/9.80665);L=9.80665*(T/(2*π))^2'],
+['Lens / mirror: 1/f = 1/v + 1/u','f:Focal length,v:Image distance,u:Object distance','f=1/(1/v+1/u);v=1/(1/f-1/u);u=1/(1/f-1/v)'],
+['Ideal gas: PV = nRT','P:Pressure (Pa),V:Volume (m³),n:Moles,T:Temperature (K)','P=n*8.314462618*T/V;V=n*8.314462618*T/P;n=P*V/(8.314462618*T);T=P*V/(n*8.314462618)']];
+const MORE=[
+{id:'tall',ic:'2–50',n:'Tables 2 to 50',d:'Every table from 2 to 50. Tap a number to jump',custom(box){
+ const bar=el('div','tgrid2'),sel=el('select','inp'),list=el('div');[10,12,15,20].forEach(n=>{const o=el('option','','Each table up to '+n);o.value=n;sel.append(o)});sel.value=TV.tall_n||10;sel.style.marginBottom='10px';
+ for(let n=2;n<=50;n++){const b=el('button','',n);b.onclick=()=>{buzz();const c=document.getElementById('tb'+n);if(c)c.scrollIntoView({behavior:'smooth',block:'start'})};bar.append(b)}
+ const draw=()=>{TV.tall_n=sel.value;list.innerHTML='';const m=+sel.value;for(let n=2;n<=50;n++){const c=el('div','tbc glass');c.id='tb'+n;c.append(el('b','','Table of '+n));const ln=el('div','tbl'),L=[];for(let i=1;i<=m;i++)L.push(n+' × '+i+' = '+n*i);ln.textContent=L.join('\n');c.append(ln);c.onclick=()=>copy(L.join('\n'),'Table of '+n+' copied');list.append(c)}};
+ sel.onchange=draw;box.append(sel,bar,list,el('div','note','Tap a table to copy it.'));draw()}},
+{id:'rom',ic:'Ⅻ',n:'Roman numerals',d:'Numbers to Roman and back, 1 to 3999',f:[{k:'a',l:'Number or Roman numeral',t:'t',ph:'2026 or MMXXVI'}],
+ run(v){const s=v.a.trim().toUpperCase();if(!s)return[];if(/^\d+$/.test(s)){const n=+s;if(n<1||n>3999)throw Error('Use 1 to 3999');return[['Roman numeral',toRom(n),1,1]]}
+  if(!/^[MDCLXVI]+$/.test(s))throw Error('Use digits, or the letters M D C L X V I');const R={I:1,V:5,X:10,L:50,C:100,D:500,M:1000};let n=0;for(let i=0;i<s.length;i++){const a=R[s[i]],b=R[s[i+1]]||0;n+=a<b?-a:a}
+  if(toRom(n)!==s)throw Error('Not a valid Roman numeral');return[['Number',n,1,1]]}},
+{id:'words',ic:'Aa',n:'Number to words',d:'Indian (lakh, crore) and international',f:[{k:'n',l:'Number',t:'n',ph:'123456789'}],
+ run(v){if(v.n==='')return[];const n=Math.round(Math.abs(+v.n));if(!Number.isSafeInteger(n)||n>=1e15)throw Error('Use a number below 10¹⁵');const s=+v.n<0?'minus ':'';
+  return[['Indian system',s+wInd(n),1,1],['International',s+wInt(n),1],['Indian commas',n.toLocaleString('en-IN')],['International commas',n.toLocaleString('en-US')]]}},
+{id:'seq',ic:'Σ',n:'AP & GP',d:'Arithmetic and geometric progressions',f:[{k:'m',l:'Type',t:'s',o:[['ap','Arithmetic (AP)'],['gp','Geometric (GP)']]},{k:'a',l:'First term a',t:'n',def:'2'},{k:'d',l:v=>v.m==='ap'?'Common difference d':'Common ratio r',t:'n',def:'3'},{k:'n',l:'Number of terms n',t:'n',def:'10'}],
+ run(v){if(v.a===''||v.d===''||v.n==='')return[];const a=+v.a,d=+v.d,n=Math.round(+v.n);if(n<1||n>1e6)throw Error('n must be from 1 to 1,000,000');const ap=v.m==='ap',t=i=>ap?a+(i-1)*d:a*Math.pow(d,i-1),S=ap?n*(2*a+(n-1)*d)/2:(d===1?a*n:a*(Math.pow(d,n)-1)/(d-1));
+  const out=[['nth term (n = '+n+')',q(t(n)),0,1],['Sum of n terms',q(S),0,1],['First terms',Array.from({length:Math.min(n,8)},(_,i)=>q(t(i+1))).join(',  ')+(n>8?'  …':''),1]];
+  if(!ap&&Math.abs(d)<1)out.push(['Sum to infinity',q(a/(1-d)),1]);return out}},
+{id:'log',ic:'log',n:'Logs & exponents',d:'Any base, antilog, powers of e and 10',f:[{k:'x',l:'x',t:'n',def:'100'},{k:'b',l:'Base b',t:'n',def:'10'}],
+ run(v){if(v.x==='')return[];const x=+v.x,b=v.b===''?10:+v.b,out=[];if(x>0&&b>0&&b!==1)out.push(['log base b of x',q(Math.log(x)/Math.log(b)),0,1]);if(x>0)out.push(['ln x',q(Math.log(x))],['log₁₀ x',q(Math.log10(x))],['log₂ x',q(Math.log2(x))]);out.push(['eˣ',q(Math.exp(x))],['10ˣ',q(Math.pow(10,x))]);if(b>0)out.push(['bˣ',q(Math.pow(b,x))]);return out}},
+{id:'vec',ic:'→',n:'Vectors',d:'Dot, cross, angle, magnitude, projection',f:[{k:'a',l:'Vector a   (2 or 3 numbers)',t:'t',ph:'1 2 3'},{k:'b',l:'Vector b   (optional)',t:'t',ph:'4 5 6'}],
+ run(v){if(!v.a.trim())return[];const a=chk(nums(v.a));if(![2,3].includes(a.length))throw Error('Use 2 or 3 numbers');const M=Math.hypot(...a),f=x=>'('+x.map(y=>q(y)).join(', ')+')',out=[['|a|',q(M),0,1],['Unit vector of a',M?f(a.map(x=>x/M)):'—']];
+  if(v.b.trim()){const b=chk(nums(v.b));if(b.length!==a.length)throw Error('Both vectors need the same size');const dot=a.reduce((s,x,i)=>s+x*b[i],0),Mb=Math.hypot(...b);
+   out.push(['|b|',q(Mb)],['a · b',q(dot),0,1],['a + b',f(a.map((x,i)=>x+b[i]))],['a − b',f(a.map((x,i)=>x-b[i]))],['a × b',a.length===3?f([a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]]):q(a[0]*b[1]-a[1]*b[0])+'  (z component)',1]);
+   if(M&&Mb)out.push(['Angle between',q(Math.acos(Math.max(-1,Math.min(1,dot/(M*Mb))))*180/Math.PI)+'°',0,1],['Projection of a on b',q(dot/Mb)])}
+  return out}},
+{id:'tri',ic:'△',n:'Triangle solver',d:'Right triangle, three sides, two sides and an angle',f:[
+ {k:'m',l:'You know',t:'s',o:[['right','Right triangle: any 2 sides'],['sss','Three sides'],['sas','Two sides and the angle between']]},
+ {k:'a',l:v=>v.m==='right'?'Leg a':'Side a',t:'n',w:1},{k:'b',l:v=>v.m==='right'?'Leg b':'Side b',t:'n',w:1},
+ {k:'c',l:v=>v.m==='right'?'Hypotenuse c':'Side c',t:'n',show:v=>v.m!=='sas'},{k:'g',l:'Angle C between a and b (degrees)',t:'n',show:v=>v.m==='sas'}],
+ run(v){const D=r=>r*180/Math.PI,A=v.a===''?null:+v.a,B=v.b===''?null:+v.b,C=v.c===''?null:+v.c;let a,b,c;
+  if(v.m==='right'){const kn=[A,B,C].filter(x=>x!==null).length;if(kn<2)return[];if(kn===3)throw Error('Leave one side empty');
+   if(C===null){a=A;b=B;c=Math.hypot(a,b)}else if(B===null){if(C<=A)throw Error('Hypotenuse must be the longest side');a=A;c=C;b=Math.sqrt(c*c-a*a)}else{if(C<=B)throw Error('Hypotenuse must be the longest side');b=B;c=C;a=Math.sqrt(c*c-b*b)}
+   const X=D(Math.atan2(a,b));return[['Sides','a = '+q(a)+'\nb = '+q(b)+'\nc = '+q(c),1,1],['Angle A',q(X)+'°'],['Angle B',q(90-X)+'°'],['Area',q(a*b/2)],['Perimeter',q(a+b+c)],['Height on hypotenuse',q(a*b/c)]]}
+  if(v.m==='sss'){if(A===null||B===null||C===null)return[];a=A;b=B;c=C;if([a,b,c].some(x=>x<=0)||a+b<=c||a+c<=b||b+c<=a)throw Error('These sides cannot form a triangle')}
+  else{if(A===null||B===null||v.g==='')return[];const g=+v.g;if(g<=0||g>=180)throw Error('Angle must be between 0 and 180');a=A;b=B;c=Math.sqrt(a*a+b*b-2*a*b*Math.cos(g*Math.PI/180))}
+  const an=(x,y,z)=>D(Math.acos(Math.max(-1,Math.min(1,(y*y+z*z-x*x)/(2*y*z))))),A1=an(a,b,c),B1=an(b,a,c),C1=180-A1-B1,s=(a+b+c)/2,ar=Math.sqrt(Math.max(0,s*(s-a)*(s-b)*(s-c))),mx=Math.max(A1,B1,C1),e=(x,y)=>Math.abs(x-y)<1e-9;
+  return[['Sides','a = '+q(a)+'\nb = '+q(b)+'\nc = '+q(c),1,1],['Angle A',q(A1)+'°'],['Angle B',q(B1)+'°'],['Angle C',q(C1)+'°'],['Area',q(ar)],['Perimeter',q(2*s)],['Type',(e(a,b)&&e(b,c)?'Equilateral':e(a,b)||e(b,c)||e(a,c)?'Isosceles':'Scalene')+', '+(Math.abs(mx-90)<1e-7?'right':mx>90?'obtuse':'acute'),1],['Inradius',q(ar/s)],['Circumradius',q(a*b*c/(4*ar))]]}},
+{id:'cod',ic:'x,y',n:'Coordinate geometry',d:'Distance, midpoint, slope, line equation, triangle area',f:[
+ {k:'a',l:'x₁',t:'n',w:1},{k:'b',l:'y₁',t:'n',w:1},{k:'c',l:'x₂',t:'n',w:1},{k:'d',l:'y₂',t:'n',w:1},{k:'e',l:'x₃   (optional)',t:'n',w:1},{k:'f',l:'y₃   (optional)',t:'n',w:1}],
+ run(v){if(['a','b','c','d'].some(k=>v[k]===''))return[];const[x1,y1,x2,y2]=[v.a,v.b,v.c,v.d].map(Number),dx=x2-x1,dy=y2-y1;if(!dx&&!dy)throw Error('The two points are the same');
+  const m=dy/dx,k=y1-m*x1,C=dx*y1-dy*x1,out=[['Distance',q(Math.hypot(dx,dy)),0,1],['Midpoint','('+q((x1+x2)/2)+', '+q((y1+y2)/2)+')',0,1],['Slope',dx===0?'Undefined (vertical)':q(m)],['Angle with x-axis',q(Math.atan2(dy,dx)*180/Math.PI)+'°'],
+   ['Line',dx===0?'x = '+q(x1):'y = '+q(m)+'x '+(k<0?'− ':'+ ')+q(Math.abs(k)),1],['General form',q(dy)+'x '+(-dx<0?'− ':'+ ')+q(Math.abs(dx))+'y '+(C<0?'− ':'+ ')+q(Math.abs(C))+' = 0',1]];
+  if(v.e!==''&&v.f!==''){const x3=+v.e,y3=+v.f;out.push(['Triangle area',q(Math.abs(x1*(y2-y3)+x2*(y3-y1)+x3*(y1-y2))/2),0,1],['Centroid','('+q((x1+x2+x3)/3)+', '+q((y1+y2+y3)/3)+')'],['Perimeter',q(Math.hypot(dx,dy)+Math.hypot(x3-x2,y3-y2)+Math.hypot(x1-x3,y1-y3))])}return out}},
+{id:'prb',ic:'P',n:'Probability',d:'Basic, binomial, Poisson, normal distribution',f:[
+ {k:'m',l:'Type',t:'s',o:[['bas','Basic probability'],['bin','Binomial distribution'],['poi','Poisson distribution'],['nor','Normal distribution']]},
+ {k:'a',l:v=>({bas:'Favourable outcomes',bin:'Trials n',poi:'Average rate λ',nor:'Mean μ'})[v.m],t:'n'},
+ {k:'b',l:v=>({bas:'Total outcomes',bin:'Probability of success p',nor:'Standard deviation σ'})[v.m],t:'n',show:v=>v.m!=='poi'},
+ {k:'c',l:v=>({bin:'Successes k',poi:'Events k',nor:'Value x'})[v.m],t:'n',show:v=>v.m!=='bas'}],
+ run(v){if(v.a===''||(v.m!=='poi'&&v.b==='')||(v.m!=='bas'&&v.c===''))return[];const a=+v.a,b=+v.b,c=+v.c,P=x=>fmt(+x.toPrecision(7)),k=Math.round(c);
+  if(v.m==='bas'){if(b<=0||a<0||a>b)throw Error('Need 0 ≤ favourable ≤ total');return[['Probability',P(a/b),0,1],['As a fraction',Number.isInteger(a)&&Number.isInteger(b)?fstr(fs([a,b])):(alt(a/b)||'—')],['Percentage',P(a/b*100)+'%']]}
+  if(v.m==='bin'){const n=Math.round(a),p=b;if(n<1||n>2000||p<0||p>1||k<0||k>n)throw Error('Need n ≥ 1, 0 ≤ p ≤ 1 and 0 ≤ k ≤ n');
+   const pm=i=>{if(p===0)return i===0?1:0;if(p===1)return i===n?1:0;let s=0;const r=Math.min(i,n-i);for(let j=1;j<=r;j++)s+=Math.log((n-r+j)/j);return Math.exp(s+i*Math.log(p)+(n-i)*Math.log(1-p))};let cum=0;for(let i=0;i<=k;i++)cum+=pm(i);
+   return[['P(X = k)',P(pm(k)),0,1],['P(X ≤ k)',P(cum),0,1],['P(X ≥ k)',P(1-cum+pm(k))],['Mean',P(n*p)],['Std deviation',P(Math.sqrt(n*p*(1-p)))]]}
+  if(v.m==='poi'){if(a<=0||k<0||k>1000)throw Error('Need λ > 0 and 0 ≤ k ≤ 1000');let lf=0,cum=0,pk=0;for(let i=0;i<=k;i++){if(i>0)lf+=Math.log(i);pk=Math.exp(-a+i*Math.log(a)-lf);cum+=pk}return[['P(X = k)',P(pk),0,1],['P(X ≤ k)',P(cum),0,1],['P(X ≥ k)',P(1-cum+pk)]]}
+  if(b<=0)throw Error('σ must be above 0');const z=(c-a)/b,cdf=.5*erfc(-z/Math.SQRT2);return[['z-score',P(z),0,1],['P(X ≤ x)',P(cdf),0,1],['P(X > x)',P(1-cdf)],['Percentile',P(cdf*100)+'%']]}},
+{id:'phy',ic:'F=ma',n:'Physics formulas',d:'22 formulas. Leave one box empty and it gets solved',custom(box){
+ const w=el('div','tool glass'),sel=el('select','inp'),form=el('div'),out=el('div','out');let inps=[];
+ PHY.forEach((p,i)=>{const o=el('option','',p[0]);o.value=i;sel.append(o)});sel.value=TV.phy||0;sel.style.marginBottom='8px';const nt=el('div','note','Fill every box except one. The empty one is solved for you.');nt.style.margin='2px 0 12px';w.append(sel,nt,form);box.append(w,out);
+ const solve=()=>{const p=PHY[sel.value],vs=p[1].split(',').map(x=>x.split(':')),sols=p[2].split(';').map(x=>[x.slice(0,x.indexOf('=')),x.slice(x.indexOf('=')+1)]),em=inps.map((i,j)=>i.value===''?j:-1).filter(j=>j>=0);
+  if(em.length!==1){cells(out,[]);return}const k=vs[em[0]][0];VARS=Object.create(null);inps.forEach((i,j)=>{if(i.value!=='')VARS[vs[j][0]]=+i.value});const res=[];
+  sols.filter(s=>s[0]===k).forEach(s=>{try{res.push([vs[em[0]][1],q(run(s[1],{deg:true})),1,1])}catch(e){}});VARS=Object.create(null);cells(out,res.length?res:[['No solution','Check the values you entered',1]])};
+ const build=()=>{TV.phy=sel.value;form.innerHTML='';inps=[];PHY[sel.value][1].split(',').forEach(x=>{const[k,l]=x.split(':'),f=el('div','fld');f.append(el('label','',k+'  =  '+l));const i=el('input','inp');i.type='number';i.step='any';i.oninput=solve;inps.push(i);f.append(i);form.append(f)});solve()};
+ sel.onchange=build;build()}},
+{id:'mol',ic:'Mol',n:'Molar mass',d:'Formula to molar mass, % composition, moles',f:[{k:'f',l:'Chemical formula',t:'t',ph:'Ca(OH)2  or  CuSO4.5H2O'},{k:'g',l:'Mass in grams   (optional)',t:'n'}],
+ run(v){const s=v.f.trim();if(!s)return[];const tot={};s.split(/[.·]/).forEach(part=>{const m=part.match(/^(\d*)(.*)$/),k=+m[1]||1,g=molParse(m[2]);for(const e in g)tot[e]=(tot[e]||0)+g[e]*k});
+  if(!Object.keys(tot).length)throw Error('Enter a formula');const M=Object.entries(tot).reduce((x,[e,c])=>x+AM[e]*c,0),out=[['Molar mass',q(M)+' g/mol',1,1],['Composition',Object.entries(tot).map(([e,c])=>e+' × '+c+'    '+q(AM[e]*c/M*100)+'%').join('\n'),1]];
+  if(v.g!==''){const mo=+v.g/M;out.push(['Moles',q(mo)],['Molecules',(mo*6.02214076e23).toExponential(4)])}return out}},
+{id:'sci',ic:'10ⁿ',n:'Scientific notation',d:'Standard form, engineering form, significant figures',f:[{k:'n',l:'Number   (like 0.000456 or 4.5e-4)',t:'t'},{k:'s',l:'Significant figures',t:'n',def:'3'}],
+ run(v){if(!v.n.trim())return[];const n=Number(v.n),s=Math.min(15,Math.max(1,Math.round(+v.s||3)));if(isNaN(n))throw Error('Enter a number');if(n===0)return[['Standard form','0 × 10⁰',1,1]];
+  const[m,e]=n.toExponential(s-1).split('e'),ex=+e,eng=Math.floor(ex/3)*3,sg=x=>(x<0?'⁻':'')+sup(Math.abs(x));
+  return[['Standard form',m+' × 10'+sg(ex),1,1],['Engineering form',+(+(n/Math.pow(10,eng)).toPrecision(s))+' × 10'+sg(eng),1],['Rounded to '+s+' sig. figs',String(+n.toPrecision(s)),1],['Exact decimal',fmt(n),1]]}},
+{id:'tim',ic:'⏱',n:'Time calculator',d:'Time difference, add or subtract hours',f:[
+ {k:'m',l:'Calculate',t:'s',o:[['diff','Difference between two times'],['add','Add or subtract time']]},
+ {k:'a',l:v=>v.m==='diff'?'Start time':'Time',t:'tm'},{k:'b',l:'End time',t:'tm',show:v=>v.m==='diff'},
+ {k:'h',l:'Hours to add (negative to subtract)',t:'n',def:'1',show:v=>v.m==='add'},{k:'n',l:'Minutes to add',t:'n',def:'30',show:v=>v.m==='add'}],
+ run(v){if(!v.a)return[];const mn=s=>{const[h,m]=s.split(':').map(Number);return h*60+m},f=t=>String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0'),a=mn(v.a);
+  if(v.m==='diff'){if(!v.b)return[];const d=(mn(v.b)-a+1440)%1440;return[['Duration',Math.floor(d/60)+' h '+d%60+' min',1,1],['Total minutes',d],['In hours',q(d/60)]]}
+  const raw=a+Math.round((+v.h||0)*60+(+v.n||0)),t=((raw%1440)+1440)%1440,dd=Math.floor(raw/1440),h12=t/60|0;
+  return[['New time',f(t),0,1],['12-hour',((h12+11)%12+1)+':'+String(t%60).padStart(2,'0')+(h12<12?' AM':' PM')],['Day',dd===0?'Same day':dd>0?'+'+dd+' day(s)':dd+' day(s)']]}},
+{id:'evd',ic:'BMI',n:'Everyday',d:'BMI, split a bill, trip fuel cost',f:[
+ {k:'m',l:'Calculate',t:'s',o:[['bmi','BMI'],['split','Split a bill'],['fuel','Trip fuel cost']]},
+ {k:'a',l:v=>({bmi:'Height (cm)',split:'Bill amount',fuel:'Distance (km)'})[v.m],t:'n'},{k:'b',l:v=>({bmi:'Weight (kg)',split:'Number of people',fuel:'Mileage (km per litre)'})[v.m],t:'n'},
+ {k:'c',l:v=>v.m==='split'?'Tip (%)':'Fuel price per litre',t:'n',show:v=>v.m!=='bmi'}],
+ run(v){if(v.a===''||v.b==='')return[];const a=+v.a,b=+v.b;
+  if(v.m==='bmi'){if(a<=0||b<=0)throw Error('Use positive numbers');const h=Math.pow(a/100,2),B=b/h;return[['BMI',q(B),0,1],['Category',B<18.5?'Underweight':B<25?'Normal':B<30?'Overweight':'Obese',0,1],['Normal range for this height',q(18.5*h)+' to '+q(24.9*h)+' kg',1]]}
+  if(v.c==='')return[];const c=+v.c;
+  if(v.m==='split'){if(b<1)throw Error('At least 1 person');const t=a*(1+c/100);return[['Each person pays',q(t/b),0,1],['Total with tip',q(t)],['Tip amount',q(a*c/100)]]}
+  if(b<=0)throw Error('Mileage must be above 0');return[['Fuel needed',q(a/b)+' litres',0,1],['Trip cost',q(a/b*c),0,1]]}},
+{id:'tt',ic:'∧∨',n:'Truth table',d:'Boolean expressions with A, B, C, D',f:[{k:'e',l:'Expression   (AND, OR, NOT, XOR, brackets)',t:'t',ph:'(A AND B) OR NOT C'}],
+ run(v){const s=v.e.trim().toUpperCase();if(!s)return[];const T=s.match(/AND|OR|NOT|XOR|[A-D]|&|\||!|\^|~|\(|\)|[01]|\s+/g);if(!T||T.join('')!==s)throw Error('Use A to D, AND, OR, NOT, XOR and brackets');
+  const vars=['A','B','C','D'].filter(x=>s.replace(/AND|OR|NOT|XOR/g,'').includes(x)),map={AND:'&&','&':'&&',OR:'||','|':'||',NOT:'!','!':'!','~':'!',XOR:'!==','^':'!=='};
+  const js=T.map(t=>/^\s+$/.test(t)?' ':map[t]||(t==='0'?'false':t==='1'?'true':t)).join(' ');let f;try{f=new Function('A','B','C','D','return !!('+js+')')}catch(e){throw Error('Check the brackets and operators')}
+  const rows=[vars.concat('F').join('  ')];let ones=0;const n=1<<vars.length;
+  for(let i=0;i<n;i++){const val={};vars.forEach((x,j)=>val[x]=!!((i>>(vars.length-1-j))&1));let r;try{r=f(val.A,val.B,val.C,val.D)}catch(e){throw Error('Check the expression')}ones+=r;rows.push(vars.map(x=>+val[x]).concat(+r).join('  '))}
+  return[['Truth table',rows.join('\n'),1,1],['Type',ones===n?'Tautology (always true)':ones===0?'Contradiction (always false)':'Contingency ('+ones+' of '+n+' rows true)',1],['Tip','XOR is evaluated before AND and OR, so use brackets when unsure',1]]}},
+{id:'stw',ic:'⏲',n:'Study timer',d:'Stopwatch, countdown and Pomodoro (25/5)',custom(box){
+ const w=el('div','tool glass'),mode=el('select','inp'),disp=el('div','big'),mins=el('input','inp'),row=el('div','row2'),b1=el('button','btn','Start'),b2=el('button','btn','Reset'),b3=el('button','btn','Lap'),laps=el('div','note');
+ [['sw','Stopwatch'],['cd','Countdown'],['pm','Pomodoro: 25 min focus, 5 min break']].forEach(([k,l])=>{const o=el('option','',l);o.value=k;mode.append(o)});
+ mins.type='number';mins.value='10';mins.placeholder='Minutes';mins.style.margin='10px 0';disp.style.cssText='font-size:50px;text-align:center;margin:14px 0';laps.style.whiteSpace='pre-line';
+ b2.style.background=b3.style.background='rgba(var(--pr),.3)';row.style.margin='4px 0';row.append(b1,b2,b3);w.append(mode,mins,disp,row,laps);box.append(w);
+ let on=false,t0=0,acc=0,target=0,phase='Focus',n=0;
+ const ft=ms=>{const s=Math.floor(ms/1000);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')+(mode.value==='sw'?'.'+Math.floor(ms%1000/100):'')},cur=()=>acc+(on?Date.now()-t0:0);
+ const show=()=>{disp.textContent=(mode.value==='pm'?phase+'  ':'')+ft(target?Math.max(0,target-cur()):cur())};
+ const setup=()=>{on=false;acc=0;n=0;laps.textContent='';phase='Focus';target=mode.value==='cd'?Math.max(1,+mins.value||1)*6e4:mode.value==='pm'?25*6e4:0;mins.style.display=mode.value==='cd'?'':'none';b3.style.display=mode.value==='sw'?'':'none';b1.textContent='Start';show()};
+ const tick=()=>{if(on&&target&&cur()>=target){buzz('ok');if(mode.value==='pm'){phase=phase==='Focus'?'Break':'Focus';target=(phase==='Focus'?25:5)*6e4;acc=0;t0=Date.now();toast(phase==='Focus'?'Back to focus':'Break time')}else{on=false;acc=target;b1.textContent='Start';toast('Time is up')}}show()};
+ b1.onclick=()=>{buzz();if(on){acc=cur();on=false;b1.textContent='Resume'}else{if(target&&acc>=target)acc=0;t0=Date.now();on=true;b1.textContent='Pause'}show()};
+ b2.onclick=()=>{buzz();setup()};b3.onclick=()=>{buzz();n++;laps.textContent='Lap '+n+'   '+ft(cur())+'\n'+laps.textContent};
+ mode.onchange=setup;mins.oninput=setup;const id=setInterval(tick,100);tcleanup=()=>clearInterval(id);setup()}},
+{id:'rnd',ic:'🎲',n:'Random & dice',d:'Random number, dice, coin, pick from a list',custom(box){
+ const w=el('div','tool glass'),res=el('div','big'),lo=el('input','inp'),hi=el('input','inp'),list=el('textarea','inp'),rr=el('div','row2');
+ lo.type=hi.type='number';lo.value='1';hi.value='100';rr.append(lo,hi);list.rows=3;list.placeholder='Names or options, one per line';res.style.cssText='font-size:42px;text-align:center;margin:14px 0;min-height:54px';
+ const ri=(a,b)=>Math.floor(Math.random()*(b-a+1))+a,btn=(t,f)=>{const b=el('button','btn',t);b.style.marginTop='8px';b.onclick=()=>{buzz('ok');res.textContent=f()};return b};
+ w.append(res,el('label','','Random number between'),rr,btn('Pick a number',()=>{const a=Math.round(+lo.value),b=Math.round(+hi.value);return a<=b?ri(a,b):ri(b,a)}),btn('Roll a dice (1 to 6)',()=>ri(1,6)),btn('Roll a D20',()=>ri(1,20)),btn('Flip a coin',()=>Math.random()<.5?'Heads':'Tails'),el('label','','Pick from a list'),list,btn('Choose one',()=>{const a=list.value.split('\n').map(s=>s.trim()).filter(Boolean);return a.length?a[ri(0,a.length-1)]:'Add some options'}));box.append(w)}}
+];
+const TOOLS=[
+...NEWTOOLS,
+...MORE,
+{id:'eq',ic:'x²',n:'Equations',d:'Polynomial roots up to any degree, linear systems',f:[
+ {k:'m',l:'Solve',t:'s',o:[['poly','Polynomial roots'],['sys','System of linear equations']]},
+ {k:'c',l:v=>v.m==='sys'?'Rows: coefficients then constant   (2 1 5; 1 -1 1)':'Coefficients, highest power first   (1 -6 11 -6)',t:'t',ph:'1 -3 2'}],
+ run(v){if(!v.c.trim())return[];
+  if(v.m==='sys'){const M=mat(v.c),n=M.length;if(M.some(r=>r.length!==n+1))throw Error('Need n equations with n+1 numbers each');return gauss(M).map((x,i)=>['xyzwuv'[i]||'x'+sub(i+1),fmt(clean(x)),0,1])}
+  const c=chk(nums(v.c));while(c.length>1&&c[0]===0)c.shift();const out=roots(c).map((z,i)=>['x'+sub(i+1),cstr(z),0,1]);
+  if(c.length===3)out.push(['Discriminant',fmt(c[1]*c[1]-4*c[0]*c[2])],['Vertex x',fmt(-c[1]/(2*c[0]))]);return out}},
+{id:'cx',ic:'i',n:'Complex numbers',d:'Arithmetic, modulus, polar form, square root',f:[
+ {k:'a',l:'z₁   (like 3+4i)',t:'t',ph:'3+4i'},{k:'b',l:'z₂   (optional)',t:'t',ph:'1-2i'},
+ {k:'o',l:'Operation',t:'s',o:[['+','z₁ + z₂'],['-','z₁ − z₂'],['*','z₁ × z₂'],['/','z₁ ÷ z₂']]}],
+ run(v){if(!v.a.trim())return[];const z=cpar(v.a),out=[];
+  if(v.b.trim())out.push(['Result',cstr({'+':cadd,'-':csub,'*':cmul,'/':cdiv}[v.o](z,cpar(v.b))),1,1]);
+  const m=Math.hypot(...z),th=Math.atan2(z[1],z[0]);
+  out.push(['Modulus |z₁|',fmt(clean(m))],['Argument',fmt(clean(th))+' rad  ('+fmt(clean(th*180/Math.PI))+'°)'],['Conjugate',cstr([z[0],-z[1]])],['z₁²',cstr(cmul(z,z))],['√z₁',cstr([Math.sqrt(m)*Math.cos(th/2),Math.sqrt(m)*Math.sin(th/2)])],['Polar form',fmt(clean(m))+' ∠ '+fmt(clean(th*180/Math.PI))+'°',1]);return out}},
+{id:'mat',ic:'▦',n:'Matrices',d:'Add, multiply, determinant, inverse, eigenvalues',f:[
+ {k:'o',l:'Operation',t:'s',o:[['mul','A × B'],['add','A + B'],['sub','A − B'],['det','Determinant of A'],['inv','Inverse of A'],['tr','Transpose of A'],['eig','Eigenvalues of A']]},
+ {k:'a',l:'Matrix A   (rows separated by ;)',t:'t',ph:'1 2; 3 4'},
+ {k:'b',l:'Matrix B',t:'t',ph:'5 6; 7 8',show:v=>['mul','add','sub'].includes(v.o)}],
+ run(v){if(!v.a.trim())return[];const A=mat(v.a);
+  if(['mul','add','sub'].includes(v.o)){if(!v.b.trim())return[];const B=mat(v.b);return[['Result',mstr(v.o==='mul'?mmul(A,B):madd(A,B,v.o==='add'?1:-1)),1,1]]}
+  if(v.o==='det')return[['det(A)',fmt(clean(det(A))),1,1]];
+  if(v.o==='inv')return[['A⁻¹',mstr(inv(A)),1,1],['det(A)',fmt(clean(det(A)))]];
+  if(v.o==='tr')return[['Aᵀ',mstr(A[0].map((_,j)=>A.map(r=>r[j]))),1,1]];
+  return roots(charPoly(A)).map((z,i)=>['λ'+sub(i+1),cstr(z),0,1])}},
+{id:'cal',ic:'∫',n:'Calculus',d:'Derivative, integral, limit, summation',f:[
+ {k:'f',l:'f(x)',t:'t',def:'x^2',ph:'sin(x)*x'},
+ {k:'o',l:'Find',t:'s',o:[['d','Derivative at x = a'],['i','Definite integral, a to b'],['l','Limit as x → a'],['s','Sum of f(x) for x = a … b']]},
+ {k:'a',l:'a',t:'n',def:'1'},{k:'b',l:'b',t:'n',def:'3',show:v=>v.o==='i'||v.o==='s'}],
+ run(v){if(!v.f.trim()||v.a==='')return[];const f=fnOf(v.f,1),a=+v.a;
+  if(v.o==='d'){const h=1e-3*Math.max(1,Math.abs(a)),d1=(-f(a+2*h)+8*f(a+h)-8*f(a-h)+f(a-2*h))/(12*h),d2=(-f(a+2*h)+16*f(a+h)-30*f(a)+16*f(a-h)-f(a-2*h))/(12*h*h);if(!isFinite(d1))throw Error('f is not smooth at a');const c=f(a)-d1*a;
+   return[["f′(a)",q(d1),0,1],["f″(a)",q(d2)],['f(a)',q(f(a))],['Tangent line','y = '+q(d1)+'x '+(c<0?'− ':'+ ')+q(Math.abs(c)),1]]}
+  if(v.o==='i'){const b=+v.b;let n=2000,h=(b-a)/n,s=f(a)+f(b);for(let i=1;i<n;i++)s+=f(a+i*h)*(i%2?4:2);const r=s*h/3;if(!isFinite(r))throw Error('f is not defined on all of [a, b]');return[['∫ f(x) dx',q(r),1,1]]}
+  if(v.o==='l'){const e=1e-7,l=f(a-e),r=f(a+e);if(isFinite(l)&&isFinite(r)&&Math.abs(l-r)<1e-4*(1+Math.abs(l)))return[['Limit',q((l+r)/2),1,1]];return[['From the left',q(l)],['From the right',q(r)],['Result','The two sides disagree, so the limit does not exist (or is infinite)',1]]}
+  const b=+v.b;if(b-a>1e6)throw Error('Range too large');let s=0;for(let i=Math.ceil(a);i<=b;i++)s+=f(i);return[['Σ f(x)',q(s),1,1]]}},
+{id:'sta',ic:'σ',n:'Statistics',d:'Mean, median, quartiles, deviation, regression',f:[
+ {k:'x',l:'Data   (commas or spaces)',t:'t',ph:'12, 15, 18, 22, 22, 30'},{k:'y',l:'Second list for regression   (optional)',t:'t',ph:'same count as above'}],
+ run(v){if(!v.x.trim())return[];const xs=chk(nums(v.x)),a=[...xs].sort((p,s)=>p-s),n=a.length,sum=a.reduce((p,s)=>p+s,0),mean=sum/n,ss=a.reduce((p,s)=>p+(s-mean)**2,0);
+  const cnt={};a.forEach(x=>cnt[x]=(cnt[x]||0)+1);const mx=Math.max(...Object.values(cnt));
+  const out=[['Count',n],['Sum',fmt(sum)],['Mean',fmt(mean),0,1],['Median',fmt(med(a)),0,1],['Mode',mx===1?'None':Object.keys(cnt).filter(k=>cnt[k]===mx).join(', ')],['Range',fmt(a[n-1]-a[0])],['Min',fmt(a[0])],['Max',fmt(a[n-1])]];
+  if(a.every(x=>x>0))out.push(['Geometric mean',fmt(Math.exp(a.reduce((p,s)=>p+Math.log(s),0)/n))],['Harmonic mean',fmt(n/a.reduce((p,s)=>p+1/s,0))]);
+  if(n>1)out.push(['Q1',fmt(med(a.slice(0,n>>1)))],['Q3',fmt(med(a.slice((n+1)>>1)))],['Population σ',fmt(Math.sqrt(ss/n))],['Sample s',fmt(Math.sqrt(ss/(n-1)))],['Variance (pop)',fmt(ss/n)],['Variance (sample)',fmt(ss/(n-1))]);
+  if(v.y.trim()){const ys=chk(nums(v.y));if(ys.length!==n)throw Error('Both lists need the same number of values');const my=ys.reduce((p,s)=>p+s,0)/n;let sxy=0,syy=0;xs.forEach((x,i)=>{sxy+=(x-mean)*(ys[i]-my);syy+=(ys[i]-my)**2});if(!ss||!syy)throw Error('Values must vary to fit a line');const m=sxy/ss,c=my-m*mean,r=sxy/Math.sqrt(ss*syy);
+   out.push(['Line of best fit','y = '+q(m)+'x '+(c<0?'− ':'+ ')+q(Math.abs(c)),1,1],['Correlation r',q(r)],['r²',q(r*r)])}
+  return out}},
+{id:'num',ic:'#',n:'Number theory',d:'Primes, factors, GCD, LCM, nCr, factorial',f:[
+ {k:'n',l:'n   (whole number)',t:'n',ph:'360'},{k:'m',l:'m   (optional, for GCD, LCM, nCr, nPr)',t:'n',ph:'84'}],
+ run(v){if(v.n==='')return[];const n=Math.round(+v.n);if(n<0||n>1e12)throw Error('Use a whole number from 0 to 10¹²');const out=[];
+  if(n>=2){const f=pf(n);out.push(['Prime?',f.length===1&&f[0][1]===1?'Yes':'No'],['Prime factors',f.map(([p,e])=>e>1?p+'^'+e:p).join(' × '),1,1]);
+   out.push(['Divisors',f.reduce((s,[,e])=>s*(e+1),1)],['Sum of divisors',fmt(f.reduce((s,[p,e])=>s*(Math.pow(p,e+1)-1)/(p-1),1))],['Euler φ(n)',fmt(f.reduce((s,[p])=>s*(1-1/p),n))])}
+  if(n<=1000){let F=1n;for(let i=2n;i<=BigInt(n);i++)F*=i;out.push(['n!',bigS(F),1]);let a=0n,b=1n;for(let i=0;i<n;i++)[a,b]=[b,a+b];out.push(['Fibonacci F(n)',bigS(a),1])}
+  if(v.m!==''){const m=Math.round(+v.m);if(m<0)throw Error('m must be 0 or more');if(m>0&&n>0)out.push(['GCD',gcd(n,m)],['LCM',fmt(n/gcd(n,m)*m)]);
+   if(m<=n&&n<=1000){let c=1n,p=1n;for(let i=1;i<=m;i++){c=c*BigInt(n-m+i)/BigInt(i);p*=BigInt(n-m+i)}out.push(['nCr',bigS(c)],['nPr',bigS(p*(c*0n+1n))])}}
+  return out}},
+{id:'uni',ic:'⇄',n:'Unit converter',d:'12 categories with an all-units table',f:[
+ {k:'c',l:'Category',t:'s',o:Object.keys(U)},{k:'v',l:'Value',t:'n',def:'1'},
+ {k:'f',l:'From',t:'s',o:v=>Object.keys(U[v.c])},{k:'u',l:'To',t:'s',o:v=>Object.keys(U[v.c]),di:1}],
+ run(v){if(v.v==='')return[];const x=+v.v,c=v.c,cv=(f,t)=>{if(c==='temperature'){const k=f==='fahrenheit'?(x-32)*5/9:f==='kelvin'?x-273.15:x;return t==='fahrenheit'?k*9/5+32:t==='kelvin'?k+273.15:k}return x*U[c][f]/U[c][t]};
+  return[['Result',q(cv(v.f,v.u))+' '+v.u,1,1],...Object.keys(U[c]).filter(u=>u!==v.f).map(u=>[u,q(cv(v.f,u))])]}},
+{id:'bas',ic:'01',n:'Bases & bitwise',d:'Binary, hex, octal, AND, OR, XOR, shifts',f:[
+ {k:'b',l:'Base of your input',t:'s',o:[['10','Decimal'],['2','Binary'],['16','Hexadecimal'],['8','Octal']]},
+ {k:'a',l:'Number',t:'t',ph:'255'},{k:'c',l:'Second number   (optional, for bitwise)',t:'t',ph:'15'}],
+ run(v){if(!v.a.trim())return[];const B=+v.b,big=(s)=>{s=s.trim().toLowerCase().replace(/[_\s]/g,'').replace({2:/^0b/,8:/^0o/,16:/^0x/,10:/^$/}[B],'');if(!s)throw Error('Enter a number');let n=0n;for(const ch of s){const d='0123456789abcdef'.indexOf(ch);if(d<0||d>=B)throw Error('"'+ch+'" is not a base-'+B+' digit');n=n*BigInt(B)+BigInt(d)}return n};
+  const g=n=>n.toString(2).replace(/\B(?=(\d{4})+$)/g,' '),n=big(v.a),out=[['Decimal',n.toString(10)],['Binary',g(n),1],['Hex',n.toString(16).toUpperCase()],['Octal',n.toString(8)]];
+  if(n>=32n&&n<=126n)out.push(['ASCII',String.fromCharCode(Number(n))]);
+  if(v.c.trim()){const m=big(v.c);out.push(['A AND B',(n&m).toString()+'  ('+g(n&m)+')',1],['A OR B',(n|m).toString()+'  ('+g(n|m)+')',1],['A XOR B',(n^m).toString()+'  ('+g(n^m)+')',1])}
+  out.push(['A << 1',(n<<1n).toString()],['A >> 1',(n>>1n).toString()],['Bits needed',n.toString(2).length]);return out}},
+{id:'fin',ic:'₹',n:'Finance',d:'EMI, interest, GST, discounts, % change',f:[
+ {k:'m',l:'Calculate',t:'s',o:[['emi','Loan EMI'],['si','Simple interest'],['ci','Compound interest'],['gst','GST / tax'],['dis','Discount'],['chg','% change']]},
+ {k:'a',l:v=>({emi:'Loan amount',si:'Principal',ci:'Principal',gst:'Price',dis:'Marked price',chg:'Old value'})[v.m],t:'n'},
+ {k:'b',l:v=>({emi:'Interest rate (% per year)',si:'Interest rate (% per year)',ci:'Interest rate (% per year)',gst:'GST rate (%)',dis:'Discount (%)',chg:'New value'})[v.m],t:'n'},
+ {k:'c',l:v=>({emi:'Tenure (months)',si:'Time (years)',ci:'Time (years)',dis:'Extra discount (%), optional'})[v.m],t:'n',show:v=>!['gst','chg'].includes(v.m)},
+ {k:'d',l:'Compounded times per year',t:'n',def:'1',show:v=>v.m==='ci'}],
+ run(v){const a=+v.a,b=+v.b,c=+v.c;if(v.a===''||v.b==='')return[];
+  if(v.m==='emi'){if(v.c===''||c<=0)return[];const r=b/1200,e=r?a*r*Math.pow(1+r,c)/(Math.pow(1+r,c)-1):a/c;return[['Monthly EMI',q(e),1,1],['Total payment',q(e*c)],['Total interest',q(e*c-a)]]}
+  if(v.m==='si'){if(v.c==='')return[];const i=a*b*c/100;return[['Interest',q(i),0,1],['Total amount',q(a+i)]]}
+  if(v.m==='ci'){if(v.c==='')return[];const k=+v.d||1,t=a*Math.pow(1+b/(100*k),k*c);return[['Total amount',q(t),0,1],['Interest earned',q(t-a)]]}
+  if(v.m==='gst')return[['GST amount',q(a*b/100)],['Price + GST',q(a*(1+b/100)),0,1],['If price already has GST: base',q(a*100/(100+b))],['GST inside it',q(a-a*100/(100+b))]];
+  if(v.m==='dis'){const e=v.c===''?0:c,f=a*(1-b/100)*(1-e/100);return[['You pay',q(f),0,1],['You save',q(a-f)],['Effective discount',q((1-f/a)*100)+'%']]}
+  if(!a)throw Error('Old value cannot be 0');const p=(b-a)/a*100;return[['Change',q(p)+'%',1,1],[p>=0?'Increase':'Decrease',q(Math.abs(b-a))]]}},
+{id:'grd',ic:'GPA',n:'Marks & attendance',d:'SGPA / CGPA, percentage, weighted marks, attendance',f:[
+ {k:'m',l:'Calculate',t:'s',o:[['cgpa','SGPA / CGPA'],['pct','Percentage'],['wavg','Weighted average'],['att','Attendance planner']]},
+ {k:'c',l:v=>v.m==='cgpa'?'Grade points × credits per subject   (8.5x4, 9x3, 7x4)':'Marks × weight   (78x30, 85x70)',t:'t',show:v=>v.m==='cgpa'||v.m==='wavg'},
+ {k:'a',l:v=>v.m==='pct'?'Marks obtained':'Classes attended',t:'n',show:v=>v.m==='pct'||v.m==='att'},
+ {k:'b',l:v=>v.m==='pct'?'Total marks':'Total classes held',t:'n',show:v=>v.m==='pct'||v.m==='att'},
+ {k:'t',l:'Target attendance (%)',t:'n',def:'75',show:v=>v.m==='att'}],
+ run(v){
+  if(v.m==='cgpa'||v.m==='wavg'){const P=[...v.c.matchAll(/(\d*\.?\d+)\s*[x×*:]\s*(\d*\.?\d+)/gi)].map(m=>[+m[1],+m[2]]);if(!P.length)return[];const w=P.reduce((s,p)=>s+p[1],0),s=P.reduce((s,p)=>s+p[0]*p[1],0)/w;
+   return v.m==='cgpa'?[['SGPA / CGPA',q(s),0,1],['Percentage (× 9.5)',q(s*9.5)+'%'],['Total credits',q(w)],['Subjects',P.length]]:[['Weighted average',q(s),1,1],['Total weight',q(w)]]}
+  if(v.a===''||v.b==='')return[];const a=+v.a,b=+v.b;if(b<=0||a<0)throw Error('Total must be above 0');
+  if(v.m==='pct'){if(a>b)throw Error('Obtained marks exceed total');return[['Percentage',q(a/b*100)+'%',1,1],['As a fraction',alt(a/b)||q(a/b)]]}
+  if(a>b)throw Error('Attended classes exceed total');const t=+v.t,cur=a/b*100,out=[['Current attendance',q(cur)+'%',0,1]];
+  if(cur>=t)out.push(['You can still miss',t>0?Math.floor((a*100-t*b)/t)+' classes':'any number',0,1]);
+  else if(t>=100)throw Error('Target must be below 100');else out.push(['Attend the next',Math.ceil((t*b-100*a)/(100-t))+' classes in a row',0,1]);return out}},
+{id:'dat',ic:'◷',n:'Dates',d:'Exact age, days between dates, add days',f:[
+ {k:'m',l:'Calculate',t:'s',o:[['age','Age from date of birth'],['diff','Days between two dates'],['add','Add or subtract days']]},
+ {k:'d',l:v=>v.m==='age'?'Date of birth':v.m==='diff'?'From':'Start date',t:'d'},
+ {k:'e',l:'To',t:'d',def:TODAY,show:v=>v.m==='diff'},{k:'n',l:'Days to add (negative to subtract)',t:'n',def:'30',show:v=>v.m==='add'}],
+ run(v){if(!v.d)return[];const a=dt(v.d),W=d=>d.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  if(v.m==='age'){const t=dt(TODAY);if(a>t)throw Error('That date is in the future');let nb=new Date(t.getFullYear(),a.getMonth(),a.getDate());if(nb<t)nb.setFullYear(t.getFullYear()+1);
+   return[['Age',ymd(a,t),1,1],['Days lived',Math.round((t-a)/864e5).toLocaleString()],['Born on a',a.toLocaleDateString('en-US',{weekday:'long'})],['Next birthday in',Math.round((nb-t)/864e5)+' days',1]]}
+  if(v.m==='diff'){if(!v.e)return[];let b=dt(v.e),x=a;if(x>b)[x,b]=[b,x];const d=Math.round((b-x)/864e5);return[['Difference',ymd(x,b),1,1],['Total days',d.toLocaleString()],['Weeks',Math.floor(d/7)+' wk '+d%7+' d']]}
+  if(v.n==='')return[];const r=new Date(a);r.setDate(r.getDate()+Math.round(+v.n));return[['Result',W(r),1,1]]}},
+{id:'geo',ic:'△',n:'Geometry',d:'Area, perimeter, volume and surface of 9 shapes',f:[
+ {k:'s',l:'Shape',t:'s',o:[['circle','Circle'],['rect','Rectangle'],['tri','Triangle (3 sides)'],['trap','Trapezium'],['sph','Sphere'],['cyl','Cylinder'],['cone','Cone'],['cube','Cube'],['cub','Cuboid']]},
+ {k:'a',l:v=>SH[v.s][0],t:'n'},{k:'b',l:v=>SH[v.s][1],t:'n',show:v=>SH[v.s].length>1},{k:'c',l:v=>SH[v.s][2],t:'n',show:v=>SH[v.s].length>2}],
+ run(v){const n=SH[v.s].length,[a,b,c]=[+v.a,+v.b,+v.c],P=Math.PI;if(v.a===''||(n>1&&v.b==='')||(n>2&&v.c===''))return[];if([a,b,c].slice(0,n).some(x=>x<=0))throw Error('Use positive numbers');
+  switch(v.s){
+   case'circle':return[['Area',q(P*a*a),0,1],['Circumference',q(2*P*a),0,1],['Diameter',q(2*a)]];
+   case'rect':return[['Area',q(a*b),0,1],['Perimeter',q(2*(a+b)),0,1],['Diagonal',q(Math.hypot(a,b))]];
+   case'tri':{if(a+b<=c||a+c<=b||b+c<=a)throw Error('These sides cannot form a triangle');const s=(a+b+c)/2,A=Math.sqrt(s*(s-a)*(s-b)*(s-c));return[['Area',q(A),0,1],['Perimeter',q(2*s),0,1],['Inradius',q(A/s)],['Circumradius',q(a*b*c/(4*A))]]}
+   case'trap':return[['Area',q((a+b)/2*c),1,1]];
+   case'sph':return[['Volume',q(4/3*P*a**3),0,1],['Surface area',q(4*P*a*a),0,1]];
+   case'cyl':return[['Volume',q(P*a*a*b),0,1],['Curved surface',q(2*P*a*b)],['Total surface',q(2*P*a*(a+b)),0,1]];
+   case'cone':{const l=Math.hypot(a,b);return[['Volume',q(P*a*a*b/3),0,1],['Slant height',q(l)],['Curved surface',q(P*a*l)],['Total surface',q(P*a*(a+l)),0,1]]}
+   case'cube':return[['Volume',q(a**3),0,1],['Surface area',q(6*a*a),0,1],['Space diagonal',q(a*Math.sqrt(3))]];
+   default:return[['Volume',q(a*b*c),0,1],['Surface area',q(2*(a*b+b*c+a*c)),0,1],['Space diagonal',q(Math.hypot(a,b,c))]]}}},
+{id:'nb',ic:'≡',n:'Notebook',d:'Type lines, get live answers. Variables, ANS, percentages',custom(box){
+ const w=el('div','tool glass'),ta=el('textarea','inp'),out=el('div');ta.rows=6;ta.spellcheck=false;ta.autocapitalize='off';
+ ta.value=load('nx-nb','price = 1200\ngst = price * 18%\ntotal = price + gst\ntotal / 3');
+ w.append(ta,el('div','note','Name a value with =   ·   ANS is the previous line   ·   start a line with // for notes'),out);box.append(w);
+ const upd=()=>{store('nx-nb',ta.value);out.innerHTML='';VARS=Object.create(null);let last=0;
+  ta.value.split('\n').forEach(l=>{const t=l.trim();if(!t||t.startsWith('//'))return;let r='⚠',nm,ex=t;const m=t.match(/^([A-Za-z_]\w*)\s*=\s*(.+)$/);if(m){nm=m[1];ex=m[2]}
+   try{const v=run(ex,{ans:last});last=v;if(nm)VARS[nm]=v;r=fmt(v)}catch(e){}const row=el('div','nbrow');row.append(el('span','',t),el('span','',r));out.append(row)});VARS=Object.create(null)};
+ ta.oninput=upd;upd()}},
+{id:'con',ic:'ħ',n:'Constants',d:'24 physics & chemistry constants. Tap to insert',custom(box){
+ const s=el('input','inp'),list=el('div');s.placeholder='Search constants';s.style.marginBottom='10px';box.append(s,list);
+ const draw=()=>{list.innerHTML='';const k=s.value.toLowerCase();CONSTS.filter(c=>(c[0]+c[1]).toLowerCase().includes(k)).forEach(([n,sy,val,u])=>{const r=el('div','crow glass'),b=el('div','n',n),cp=el('button','','Copy');b.append(el('small','',val+' '+u));cp.onclick=e=>{e.stopPropagation();copy(val)};r.append(el('div','s',sy),b,cp);r.onclick=()=>{go('calc');ins('('+val+')');toast(sy+' added to calculator')};list.append(r)})};
+ s.oninput=draw;draw()}}
+];
+const TV={};
+function cells(box,items){box.innerHTML='';items.forEach(([k,v,w,h])=>{const c=el('div','cell'+(w?' wide':'')+(h?' hi':'')),b=el('b','',k),s=el('span','',String(v));c.append(b,s);c.onclick=()=>copy(v,String(v).length>28||String(v).includes('\n')?'Copied':null);box.append(c)})}
+let tcleanup=null;
+function showTool(id){
+ if(tcleanup){tcleanup();tcleanup=null}
+ const t=TOOLS.find(x=>x.id===id);$('#tl-grid').style.display=t?'none':'';$('#tl-page').style.display=t?'':'none';if(!t)return;
+ $('#ttitle').textContent=t.n;const box=$('#tl-body');box.innerHTML='';if(t.custom)return t.custom(box);
+ const v=TV[t.id]||(TV[t.id]={}),form=el('div','tool glass'),res=el('div','out');box.append(form,res);
+ const calc=()=>{try{cells(res,t.run(v)||[])}catch(e){cells(res,[['Check your input',(e&&e.message&&e.message!=='0')?e.message:'Something looks off',1]])}};
+ const dc=(()=>{let t;return()=>{clearTimeout(t);t=setTimeout(calc,60)}})();
+ const build=()=>{form.innerHTML='';let rw=null;t.f.forEach(fd=>{
+  if(fd.show&&!fd.show(v))return;
+  let o=fd.o&&(typeof fd.o==='function'?fd.o(v):fd.o);
+  if(fd.t==='s'){o=o.map(x=>Array.isArray(x)?x:[x,x]);if(!o.some(x=>x[0]===v[fd.k]))v[fd.k]=o[Math.min(fd.di||0,o.length-1)][0]}
+  else if(v[fd.k]===undefined)v[fd.k]=fd.def==null?'':String(fd.def);
+  const w=el('div','fld');w.append(el('label','',typeof fd.l==='function'?fd.l(v):fd.l));let i;
+  if(fd.t==='s'){i=el('select','inp');o.forEach(([val,lab])=>{const p=el('option','',lab);p.value=val;i.append(p)});i.value=v[fd.k];i.onchange=()=>{v[fd.k]=i.value;build();calc()}}
+  else{i=el('input','inp');i.type=fd.t==='n'?'number':fd.t==='d'?'date':fd.t==='tm'?'time':'text';if(fd.t==='n')i.step='any';if(fd.t==='t'){i.autocapitalize='off';i.spellcheck=false}i.placeholder=fd.ph||'';i.value=v[fd.k];i.oninput=()=>{v[fd.k]=i.value;dc()}}
+  w.append(i);if(fd.w){if(!rw||rw.children.length>=2){rw=el('div','row2');form.append(rw)}rw.append(w)}else{rw=null;form.append(w)}})};
+ build();calc();
+}
+const CAT={lh:'School maths',frc:'School maths',pct:'School maths',rt:'School maths',num:'School maths',rom:'School maths',words:'School maths',tbl:'Tables',tall:'Tables',eq:'Algebra & calculus',mat:'Algebra & calculus',cx:'Algebra & calculus',cal:'Algebra & calculus',seq:'Algebra & calculus',log:'Algebra & calculus',vec:'Algebra & calculus',geo:'Geometry',tri:'Geometry',cod:'Geometry',sta:'Statistics & probability',prb:'Statistics & probability',phy:'Science',mol:'Science',con:'Science',uni:'Science',sci:'Science',bas:'Computer',tt:'Computer'};
+const ORDER=['School maths','Tables','Algebra & calculus','Geometry','Statistics & probability','Science','Everyday & study','Computer'];
+TOOLS.forEach(t=>t.cat=CAT[t.id]||'Everyday & study');
+function renderGrid(){const g=$('#tg'),k=$('#tsearch').value.trim().toLowerCase();g.innerHTML='';
+ ORDER.forEach(cat=>{const ts=TOOLS.filter(t=>t.cat===cat&&(t.n+' '+t.d).toLowerCase().includes(k));if(!ts.length)return;g.append(el('div','tcat',cat));const row=el('div','tgrid');
+  ts.forEach(t=>{const c=el('button','tcard glass');c.append(el('div','ic',t.ic),el('b','',t.n),el('small','',t.d));c.onclick=()=>{buzz();go('tools',t.id)};row.append(c)});g.append(row)});
+ if(!g.children.length)g.append(el('div','empty','No tool found'))}
+$('#tsearch').placeholder='Search '+TOOLS.length+' tools';$('#tsearch').oninput=renderGrid;renderGrid();
+
+/* ====== GRAPH ====== */
+const G={cx:0,cy:0,s:48,fns:[null,null,null],raw:['sin(x)','x^2/4-2',''],tr:false,tx:null},GC=['#22d3ee','#e879f9','#fbbf24'];
+let gctx,gW=0,gH=0,dpr=1,gfocus=null,gStep=1,gq=0;
+const gDrawQ=()=>{if(!gq)gq=requestAnimationFrame(()=>{gq=0;gDraw()})};
+function gResize(){const c=$('#gc'),w=c.clientWidth,h=c.clientHeight;if(!w||!h)return;dpr=Math.min(devicePixelRatio||1,2);gColors();c.width=w*dpr;c.height=h*dpr;gW=w;gH=h;gctx=c.getContext('2d');gDraw()}
+const gf=n=>String(+n.toPrecision(6));
+function gDraw(){if(!gctx||!gW)return;const x=gctx,line=gcol.line,tx=gcol.tx,mut=gcol.mut;
+ x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,gW,gH);
+ const sx=a=>(a-G.cx)*G.s+gW/2,sy=a=>gH/2-(a-G.cy)*G.s,raw=70/G.s,mg=Math.pow(10,Math.floor(Math.log10(raw))),r=raw/mg,step=(r>=5?5:r>=2?2:1)*mg;
+ const x0=G.cx-gW/2/G.s,x1=G.cx+gW/2/G.s,y0=G.cy-gH/2/G.s,y1=G.cy+gH/2/G.s;
+ x.lineWidth=1;x.font='11px system-ui,sans-serif';x.fillStyle=mut;x.strokeStyle=line;
+ const ay=Math.min(gH-6,Math.max(14,sy(0)+13)),axx=Math.min(gW-30,Math.max(4,sx(0)+4));
+ for(let i=Math.ceil(x0/step);i*step<=x1;i++){const p=sx(i*step);x.beginPath();x.moveTo(p,0);x.lineTo(p,gH);x.stroke();if(i)x.fillText(gf(i*step),p+3,ay)}
+ for(let j=Math.ceil(y0/step);j*step<=y1;j++){const p=sy(j*step);x.beginPath();x.moveTo(0,p);x.lineTo(gW,p);x.stroke();if(j)x.fillText(gf(j*step),axx,p-3)}
+ x.strokeStyle=tx;x.globalAlpha=.55;x.lineWidth=1.5;x.beginPath();x.moveTo(sx(0),0);x.lineTo(sx(0),gH);x.moveTo(0,sy(0));x.lineTo(gW,sy(0));x.stroke();x.globalAlpha=1;
+ G.fns.forEach((f,i)=>{if(!f)return;x.strokeStyle=GC[i];x.lineWidth=2.3;x.lineJoin='round';x.beginPath();let pen=false,py=0;
+  for(let px=0;px<=gW;px+=gStep){let y;try{y=f(G.cx+(px-gW/2)/G.s)}catch(e){y=NaN}if(typeof y!=='number'||!isFinite(y)||Math.abs(y)>1e7){pen=false;continue}const p=sy(y);if(!pen||Math.abs(p-py)>gH*3){x.moveTo(px,p);pen=true}else x.lineTo(px,p);py=p}x.stroke()});
+ if(G.tx!=null){const p=sx(G.tx);x.strokeStyle=tx;x.globalAlpha=.4;x.setLineDash([5,5]);x.beginPath();x.moveTo(p,0);x.lineTo(p,gH);x.stroke();x.setLineDash([]);x.globalAlpha=1;
+  let info='x = '+q(G.tx);G.fns.forEach((f,i)=>{if(!f)return;let y;try{y=f(G.tx)}catch(e){y=NaN}info+='   f'+(i+1)+' = '+q(y);if(isFinite(y)){x.fillStyle=GC[i];x.beginPath();x.arc(p,sy(y),5,0,7);x.fill()}});$('#gInfo').textContent=info}}
+const gc=$('#gc'),pts=new Map();let pd=0;
+const pdist=()=>{const a=[...pts.values()];return a.length<2?0:Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1])};
+const gT=px=>{G.tx=G.cx+(px-gW/2)/G.s;gDrawQ()};
+gc.addEventListener('pointerdown',e=>{gStep=2;gc.setPointerCapture(e.pointerId);pts.set(e.pointerId,[e.offsetX,e.offsetY]);pd=pdist();if(G.tr&&pts.size===1)gT(e.offsetX)});
+gc.addEventListener('pointermove',e=>{const o=pts.get(e.pointerId);if(!o)return;const n=[e.offsetX,e.offsetY];
+ if(pts.size===1){if(G.tr)G.tx=G.cx+(n[0]-gW/2)/G.s;else{G.cx-=(n[0]-o[0])/G.s;G.cy+=(n[1]-o[1])/G.s}}
+ pts.set(e.pointerId,n);if(pts.size===2){const d=pdist();if(pd)G.s=Math.min(1e5,Math.max(.01,G.s*d/pd));pd=d}gDrawQ()});
+['pointerup','pointercancel'].forEach(t=>gc.addEventListener(t,e=>{pts.delete(e.pointerId);pd=0;if(!pts.size){gStep=1;gDraw()}}));
+gc.addEventListener('wheel',e=>{e.preventDefault();const f=e.deltaY<0?1.12:1/1.12,wx=G.cx+(e.offsetX-gW/2)/G.s,wy=G.cy-(e.offsetY-gH/2)/G.s;G.s=Math.min(1e5,Math.max(.01,G.s*f));G.cx=wx-(e.offsetX-gW/2)/G.s;G.cy=wy+(e.offsetY-gH/2)/G.s;gDrawQ()},{passive:false});
+function gInsert(t){const i=gfocus||$('#gfn input');const a=i.selectionStart??i.value.length,b=i.selectionEnd??a;i.value=i.value.slice(0,a)+t+i.value.slice(b);const p=a+t.length;i.focus();try{i.setSelectionRange(p,p)}catch(e){}i.dispatchEvent(new Event('input'))}
+[0,1,2].forEach(i=>{const r=el('div','frow'),d=el('i'),inp=el('input','inp');d.style.background=GC[i];inp.placeholder='f'+(i+1)+'(x) = …';inp.value=G.raw[i];inp.autocapitalize='off';inp.spellcheck=false;
+ inp.onfocus=()=>gfocus=inp;inp.oninput=()=>{G.raw[i]=inp.value;try{G.fns[i]=inp.value.trim()?fnOf(inp.value,1):null;inp.classList.remove('bad')}catch(e){G.fns[i]=null;inp.classList.add('bad')}gDrawQ()};r.append(d,inp);$('#gfn').append(r);inp.oninput()});
+[['x','x'],['^','^'],['(','('],[')',')'],['π','π'],['√','√('],['sin','sin('],['cos','cos('],['tan','tan('],['ln','ln('],['|x|','abs('],['ℯˣ','ℯ^(']].forEach(([l,t])=>{const b=el('button','',l);b.onpointerdown=e=>e.preventDefault();b.onclick=()=>{buzz();gInsert(t)};$('#gkeys').append(b)});
+$('#gTrace').onclick=e=>{G.tr=!G.tr;e.target.classList.toggle('on',G.tr);if(!G.tr){G.tx=null;$('#gInfo').textContent='Drag to pan, pinch to zoom';gDraw()}else{G.tx=G.cx;gDraw()}};
+$('#gReset').onclick=()=>{G.cx=G.cy=0;G.s=48;G.tx=null;gDraw()};
+$('#gZero').onclick=()=>{const out=$('#gz'),x0=G.cx-gW/2/G.s,x1=G.cx+gW/2/G.s,items=[];
+ G.fns.forEach((f,i)=>{if(!f)return;const found=[];let prev=null;for(let k=0;k<=1500&&found.length<6;k++){const xx=x0+(x1-x0)*k/1500;let y;try{y=f(xx)}catch(e){prev=null;continue}if(!isFinite(y)){prev=null;continue}
+  if(prev&&prev.y*y<=0&&!(prev.y===0&&y===0)){let a=prev.x,b=xx,fa=prev.y;for(let j=0;j<60;j++){const m=(a+b)/2,fm=f(m);if(fa*fm<=0)b=m;else{a=m;fa=fm}}let r=(a+b)/2;if(Math.abs(r)<1e-9)r=0;if(Math.abs(f(r))<1e-6&&!found.some(z=>Math.abs(z-r)<1e-6))found.push(r)}prev={x:xx,y}}
+  found.forEach(r=>items.push(['f'+(i+1)+' crosses zero','x = '+q(r)]));try{items.push(['f'+(i+1)+' at x = 0','y = '+q(f(0))])}catch(e){}});
+ cells(out,items.length?items:[['Nothing yet','Type a function above first',1]])};
+
+/* ====== BOOT ====== */
+history.replaceState(cur,'');applyTheme();draw();
+try{if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)&&!window.Capacitor)navigator.serviceWorker.register('sw.js')}catch(e){}
+
+</script>
+</body>
+</html>
